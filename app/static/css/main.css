@@ -908,6 +908,15 @@ body {
   color: white;
 }
 
+.badge-manual {
+  background: #3b82f6;
+  color: white;
+  font-size: var(--text-xs);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
 /* Filter panel */
 .filter-panel {
   display: flex;

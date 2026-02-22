@@ -17,6 +17,7 @@
       <span class="recipe-value {% if shot.is_failed %}text-danger{% endif %}">
         {{ shot.taste }}<span class="recipe-unit">/10</span>
       </span>
+      {% if shot.is_manual %}<span class="badge badge-manual">Manual</span>{% endif %}
       {% if shot.is_failed %}<span class="badge badge-failed">Failed</span>{% endif %}
     </div>
 

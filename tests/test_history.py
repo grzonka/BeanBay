@@ -42,6 +42,7 @@ def _seed_shot(
     is_failed: bool = False,
     notes: str | None = None,
     created_at: datetime | None = None,
+    is_manual: bool = False,
 ) -> Measurement:
     """Seed a measurement directly into the DB."""
     m = Measurement(
@@ -55,6 +56,7 @@ def _seed_shot(
         saturation="yes",
         taste=taste,
         is_failed=is_failed,
+        is_manual=is_manual,
         notes=notes,
     )
     if created_at is not None:
@@ -324,3 +326,37 @@ def test_shot_edit_returns_oob_row_update(client, sample_bean, db_session):
     # Response must contain oob swap for the row element
     assert "hx-swap-oob" in html
     assert f"shot-{shot.id}" in html
+
+
+# ---------------------------------------------------------------------------
+# Manual badge tests
+# ---------------------------------------------------------------------------
+
+
+def test_history_shows_manual_badge(client, sample_bean, db_session):
+    """Manual measurement shows 'Manual' badge in history list."""
+    _seed_shot(db_session, sample_bean.id, is_manual=True)
+
+    response = client.get("/history")
+    assert response.status_code == 200
+    assert "badge-manual" in response.text
+    assert "Manual" in response.text
+
+
+def test_history_manual_badge_not_shown_for_regular(client, sample_bean, db_session):
+    """Regular (non-manual) measurement does not show 'Manual' badge."""
+    _seed_shot(db_session, sample_bean.id, is_manual=False)
+
+    response = client.get("/history")
+    assert response.status_code == 200
+    assert "badge-manual" not in response.text
+
+
+def test_shot_detail_shows_manual_badge(client, sample_bean, db_session):
+    """Manual measurement shows 'Manual' badge in shot detail modal."""
+    shot = _seed_shot(db_session, sample_bean.id, is_manual=True)
+
+    response = client.get(f"/history/{shot.id}")
+    assert response.status_code == 200
+    assert "badge-manual" in response.text
+    assert "Manual" in response.text
