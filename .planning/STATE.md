@@ -42,7 +42,7 @@ Progress: ██░░░ 40% (2/5 v1.1 plans)
 
 ## Blockers
 
-- **GitHub repo not yet created.** User needs to create `grzonka/beanbay` on GitHub and add remote before Phase 8 (CI/release).
+- ~~GitHub repo not yet created.~~ ✅ `grzonka/beanbay` exists on GitHub.
 - Docker build not verified (daemon not available in dev environment).
 
 ## Accumulated Context
