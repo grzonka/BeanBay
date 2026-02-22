@@ -86,27 +86,7 @@ wheels = [
 ]
 
 [[package]]
-name = "botorch"
-version = "0.17.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "gpytorch" },
-    { name = "linear-operator" },
-    { name = "multipledispatch" },
-    { name = "pyre-extensions" },
-    { name = "pyro-ppl" },
-    { name = "scipy" },
-    { name = "threadpoolctl" },
-    { name = "torch" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/e9/077ae6a4f14a09fd6564ca1325f3061d27450649fd380f1c308bedc22634/botorch-0.17.0.tar.gz", hash = "sha256:32e5c3ee99504b909d3a495e35c0b193566a5851e6a50e761b67338d11086749", size = 3745790, upload-time = "2026-02-17T19:02:03.733Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/9e/ce611d8c5619dfc1a5f0a66cd9d1df3da219151d31027f530c8f92f3547c/botorch-0.17.0-py3-none-any.whl", hash = "sha256:fb8610cbf43a48746aa5935141b12063723abf0f8c353132cfcd9757703d02c2", size = 4562423, upload-time = "2026-02-17T19:02:02.007Z" },
-]
-
-[[package]]
-name = "brewflow"
+name = "beanbay"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -144,6 +124,26 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0" },
 ]
 provides-extras = ["dev"]
+
+[[package]]
+name = "botorch"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gpytorch" },
+    { name = "linear-operator" },
+    { name = "multipledispatch" },
+    { name = "pyre-extensions" },
+    { name = "pyro-ppl" },
+    { name = "scipy" },
+    { name = "threadpoolctl" },
+    { name = "torch" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f1/e9/077ae6a4f14a09fd6564ca1325f3061d27450649fd380f1c308bedc22634/botorch-0.17.0.tar.gz", hash = "sha256:32e5c3ee99504b909d3a495e35c0b193566a5851e6a50e761b67338d11086749", size = 3745790, upload-time = "2026-02-17T19:02:03.733Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/9e/ce611d8c5619dfc1a5f0a66cd9d1df3da219151d31027f530c8f92f3547c/botorch-0.17.0-py3-none-any.whl", hash = "sha256:fb8610cbf43a48746aa5935141b12063723abf0f8c353132cfcd9757703d02c2", size = 4562423, upload-time = "2026-02-17T19:02:02.007Z" },
+]
 
 [[package]]
 name = "cattrs"
