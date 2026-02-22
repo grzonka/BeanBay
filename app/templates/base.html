@@ -10,44 +10,47 @@
   <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
 </head>
 <body>
-  <nav class="nav">
-    <div class="nav-inner">
-      <a href="/beans" class="nav-brand">BeanBay</a>
-      <button class="nav-hamburger" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
-        <span class="hamburger-icon"></span>
-      </button>
-    </div>
-  </nav>
+  <div class="app-layout">
+    <nav class="nav">
+      <div class="nav-inner">
+        <a href="/beans" class="nav-brand">BeanBay</a>
+        <button class="nav-hamburger" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+          <span class="hamburger-icon"></span>
+        </button>
+      </div>
+    </nav>
 
-  <!-- Overlay backdrop -->
-  <div class="nav-overlay" id="nav-overlay"></div>
+    <!-- Overlay backdrop -->
+    <div class="nav-overlay" id="nav-overlay"></div>
 
-  <!-- Drawer -->
-  <div class="nav-drawer" id="nav-drawer">
-    <a href="/brew" class="nav-drawer-link">Brew</a>
-    <a href="/history" class="nav-drawer-link">History</a>
-    <a href="/insights" class="nav-drawer-link">Insights</a>
-    <a href="/analytics" class="nav-drawer-link">Analytics</a>
-    <hr class="nav-drawer-divider">
-    <div class="nav-drawer-bean" id="active-bean-indicator">
-      {% if active_bean %}
-        <div style="display:flex; align-items:center; gap:var(--spacing-sm);">
-          <a href="/beans/{{ active_bean.id }}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; color:var(--text-secondary); text-decoration:none;">{{ active_bean.name }}</a>
-          <form method="post" action="/beans/deactivate" style="flex-shrink:0;">
-            <button type="submit" class="btn btn-secondary" style="padding:0.15rem 0.4rem; font-size:0.75rem; min-height:auto;">✕</button>
-          </form>
-        </div>
-      {% else %}
-        <span class="text-muted">No bean selected</span>
-      {% endif %}
-    </div>
+    <!-- Drawer / Sidebar -->
+    <aside class="nav-drawer" id="nav-drawer">
+      <a href="/beans" class="nav-drawer-brand">BeanBay</a>
+      <a href="/brew" class="nav-drawer-link">Brew</a>
+      <a href="/history" class="nav-drawer-link">History</a>
+      <a href="/insights" class="nav-drawer-link">Insights</a>
+      <a href="/analytics" class="nav-drawer-link">Analytics</a>
+      <hr class="nav-drawer-divider">
+      <div class="nav-drawer-bean" id="active-bean-indicator">
+        {% if active_bean %}
+          <div style="display:flex; align-items:center; gap:var(--spacing-sm);">
+            <a href="/beans/{{ active_bean.id }}" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; flex:1; color:var(--text-secondary); text-decoration:none;">{{ active_bean.name }}</a>
+            <form method="post" action="/beans/deactivate" style="flex-shrink:0;">
+              <button type="submit" class="btn btn-secondary" style="padding:0.15rem 0.4rem; font-size:0.75rem; min-height:auto;">✕</button>
+            </form>
+          </div>
+        {% else %}
+          <span class="text-muted">No bean selected</span>
+        {% endif %}
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="container">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
   </div>
-
-  <main class="main">
-    <div class="container">
-      {% block content %}{% endblock %}
-    </div>
-  </main>
 
   <script>
     (function() {
