@@ -1,5 +1,6 @@
 """Bean management routes — CRUD, activation, parameter overrides."""
 
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -26,16 +27,20 @@ def _get_active_bean(request: Request, db: Session) -> Optional[Bean]:
 
 
 def _bean_with_shot_count(db: Session, bean: Bean) -> dict:
-    """Build a dict with bean fields + shot_count."""
+    """Build a dict with bean fields + shot_count + bags."""
     count = db.query(func.count(Measurement.id)).filter(Measurement.bean_id == bean.id).scalar()
     return {
         "id": bean.id,
         "name": bean.name,
         "roaster": bean.roaster,
         "origin": bean.origin,
+        "roast_date": bean.roast_date,
+        "process": bean.process,
+        "variety": bean.variety,
         "created_at": bean.created_at,
         "parameter_overrides": bean.parameter_overrides,
         "shot_count": count or 0,
+        "bags": sorted(bean.bags, key=lambda b: b.created_at, reverse=True) if bean.bags else [],
     }
 
 
@@ -64,6 +69,9 @@ async def create_bean(
     name: str = Form(...),
     roaster: str = Form(""),
     origin: str = Form(""),
+    roast_date: str = Form(""),
+    process: str = Form(""),
+    variety: str = Form(""),
     db: Session = Depends(get_db),
 ):
     """Create a new bean."""
@@ -71,6 +79,9 @@ async def create_bean(
         name=name.strip(),
         roaster=roaster.strip() or None,
         origin=origin.strip() or None,
+        roast_date=datetime.strptime(roast_date, "%Y-%m-%d").date() if roast_date.strip() else None,
+        process=process.strip() or None,
+        variety=variety.strip() or None,
     )
     db.add(bean)
     db.commit()
