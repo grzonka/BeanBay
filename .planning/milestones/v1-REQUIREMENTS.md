@@ -1,3 +1,13 @@
+# Requirements Archive: v1 BrewFlow MVP
+
+**Archived:** 2026-02-22
+**Status:** SHIPPED
+
+This is the archived requirements specification for v1.
+For current requirements, see `.planning/REQUIREMENTS.md` (created for next milestone).
+
+---
+
 # Requirements: BrewFlow
 
 **Defined:** 2026-02-21
@@ -84,8 +94,6 @@ Explicitly excluded. Documented to prevent scope creep.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | BEAN-01 | Phase 2 | Complete |
@@ -113,9 +121,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 - v1 requirements: 22 total
-- Mapped to phases: 22 ✓
-- Unmapped: 0
+- Shipped: 22
+- Dropped: 0
 
 ---
-*Requirements defined: 2026-02-21*
-*Last updated: 2026-02-22 — all 22 v1 requirements complete*
+
+## Milestone Summary
+
+**Shipped:** 22 of 22 v1 requirements
+**Adjusted:** None — all requirements shipped as originally specified
+**Dropped:** None
+
+---
+*Archived: 2026-02-22 as part of v1 milestone completion*
