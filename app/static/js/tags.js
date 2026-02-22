@@ -210,11 +210,27 @@
 
   // ---------------------------------------------------------------------------
   // Flavor slider: strip name from untouched sliders on form submit
+  // Taste slider: block submit if untouched
   // ---------------------------------------------------------------------------
 
   function initFlavorSliders() {
     document.addEventListener("submit", function (e) {
       var form = e.target;
+
+      // Taste slider: block submit if untouched (unless no taste slider on this page)
+      var tasteInput = form.querySelector('#taste');
+      if (tasteInput && tasteInput.dataset.touched !== 'true') {
+        e.preventDefault();
+        var msg = document.getElementById('taste-required-msg');
+        if (msg) {
+          msg.classList.add('visible');
+          // Scroll the message into view so user sees it
+          msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      // Strip name from untouched flavor sliders so they submit null
       var sliders = form.querySelectorAll(".flavor-slider");
       sliders.forEach(function (slider) {
         if (slider.dataset.touched !== "true") {
@@ -222,6 +238,15 @@
         }
       });
     });
+
+    // Hide taste validation message on slider interaction
+    var tasteSlider = document.getElementById('taste');
+    if (tasteSlider) {
+      tasteSlider.addEventListener('input', function () {
+        var msg = document.getElementById('taste-required-msg');
+        if (msg) msg.classList.remove('visible');
+      });
+    }
   }
 
   // ---------------------------------------------------------------------------
