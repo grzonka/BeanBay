@@ -34,6 +34,7 @@ class Measurement(Base):
     bitterness = Column(Float, nullable=True)
     aroma = Column(Float, nullable=True)
     intensity = Column(Float, nullable=True)
+    flavor_tags = Column(String, nullable=True)  # JSON-encoded list of tag strings
 
     created_at = Column(DateTime, server_default=func.now())
 

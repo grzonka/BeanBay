@@ -8,6 +8,7 @@ Implements the core espresso optimization workflow:
   GET  /brew/best                    — Show highest-rated shot
 """
 
+import json
 import uuid
 from typing import Optional
 
@@ -153,6 +154,14 @@ async def record_measurement(
     taste: float = Form(7.0),
     extraction_time: Optional[float] = Form(None),
     is_failed: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    acidity: Optional[float] = Form(None),
+    sweetness: Optional[float] = Form(None),
+    body: Optional[float] = Form(None),
+    bitterness: Optional[float] = Form(None),
+    aroma: Optional[float] = Form(None),
+    intensity: Optional[float] = Form(None),
+    flavor_tags: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     """Record a measurement — saves to SQLite and BayBE campaign."""
@@ -167,6 +176,19 @@ async def record_measurement(
 
     # Clamp taste to valid range
     taste = max(1.0, min(10.0, taste))
+
+    # Clamp flavor dimensions to 1-5 if provided
+    def _clamp_flavor(val: Optional[float]) -> Optional[float]:
+        if val is None:
+            return None
+        return max(1.0, min(5.0, val))
+
+    # Convert comma-separated flavor_tags string to JSON list
+    flavor_tags_json = None
+    if flavor_tags:
+        tags = [t.strip() for t in flavor_tags.split(",") if t.strip()][:10]
+        if tags:
+            flavor_tags_json = json.dumps(tags)
 
     # Deduplication: skip if recommendation_id already recorded
     existing = (
@@ -185,6 +207,14 @@ async def record_measurement(
             taste=taste,
             extraction_time=extraction_time if extraction_time else None,
             is_failed=failed,
+            notes=notes.strip() if notes else None,
+            acidity=_clamp_flavor(acidity),
+            sweetness=_clamp_flavor(sweetness),
+            body=_clamp_flavor(body),
+            bitterness=_clamp_flavor(bitterness),
+            aroma=_clamp_flavor(aroma),
+            intensity=_clamp_flavor(intensity),
+            flavor_tags=flavor_tags_json,
         )
         db.add(measurement)
         db.commit()
