@@ -38,7 +38,7 @@ Plans:
 
 Plans:
 - [ ] 08-01-PLAN.md — Create concise README.md with WIP indication (LICENSE already present)
-- [ ] 08-02-PLAN.md — Create GitHub Actions CI/CD workflows (test + Docker publish)
+- [ ] 08-02-PLAN.md — Create GitHub Actions CI/CD workflows (test + Docker publish) + v1.1 release
 
 **Success criteria:**
 - README.md with concise project description, WIP indication, Docker quick start, dev setup
