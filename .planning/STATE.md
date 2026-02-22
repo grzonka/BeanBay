@@ -1,14 +1,14 @@
 # Project State: BrewFlow
 
 **Last updated:** 2026-02-22
-**Current phase:** Phase 5 (Insights & Trust) — Complete (2/2 plans done).
+**Current phase:** Phase 5 (Insights & Trust) — Complete (3/3 plans done, including UAT fixes).
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Every espresso shot teaches the system something — the app must make it effortless to capture feedback from a phone at the espresso machine and return increasingly better recommendations.
-**Current focus:** Phase 5 complete. Ready for Phase 6 (Analytics & Exploration).
+**Current focus:** Phase 5 complete (including UAT fix plan 03). Ready for Phase 6 (Analytics & Exploration).
 
 ## Phase Status
 
@@ -18,7 +18,7 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 | 2 | Bean Management & Mobile Shell | ● Complete | 2/2 | 100% |
 | 3 | Optimization Loop | ● Complete | 2/2 | 100% |
 | 4 | Shot History & Feedback Depth | ● Complete | 3/3 | 100% |
-| 5 | Insights & Trust | ● Complete | 2/2 | 100% |
+| 5 | Insights & Trust | ● Complete | 3/3 | 100% |
 | 6 | Analytics & Exploration | ○ Not started | 0/0 | 0% |
 
 **Overall progress:** ██████████████░░░░░░ ~74% (14/14 planned plans complete, Phase 6 TBD)
@@ -52,7 +52,10 @@ See: .planning/PROJECT.md (updated 2026-02-21)
   - **[05-01]** Prediction threshold: >= 2 measurements for meaningful posterior stats
   - **[05-02]** Convergence detection: rule-based (n < 3 / n < 8 / trend comparison) — no BayBE convergence API exists
   - **[05-02]** Chart.js CDN loaded in `_progress_chart.html` partial (not base.html) — guaranteed script load order
-  - **[05-02]** Chart data passed via `{{ chart_data | tojson }}` — no separate API endpoint needed
+  - **[05-03]** campaign.clear_cache() before campaign.recommend() — prevents UNSPECIFIED.__bool__() crash on 2nd+ recommend calls
+  - **[05-03]** switch_after=5 on TwoPhaseMetaRecommender — random exploration lasts 5 shots (was ~1)
+  - **[05-03]** Three-phase badge: random (0-4) / bayesian_early-Learning (5-7) / bayesian-Bayesian optimization (8+)
+  - **[05-03]** insight-badge-bayesian_early CSS class (green-tinted, #2a3a32 bg, #7ae0a8 text)
 
 ## Blockers
 
@@ -93,8 +96,8 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 
 ### Last Session
 - **Date:** 2026-02-22
-- **What happened:** Executed plan 05-02 (insights page). Created `/insights` route with Chart.js progress chart (cumulative best + shot scatter), 5-state convergence badge, and optimizer mode indicator. Added Insights nav link. 6 new tests. 98/98 pass. Phase 5 complete.
-- **Where we left off:** Phase 5 complete (2/2). Ready for Phase 6.
+- **What happened:** Executed plan 05-03 (UAT gap fixes). Fixed BayBE crash on 2nd+ recommend (clear_cache fix), set switch_after=5, added bayesian_early/Learning phase badge. 2 tests updated, 2 new tests added. 100/100 pass. Phase 5 fully complete.
+- **Where we left off:** Phase 5 complete (3/3). Ready for Phase 6.
 
 ### Next Steps
 1. Define and execute Phase 6 (Analytics & Exploration) — TBD
