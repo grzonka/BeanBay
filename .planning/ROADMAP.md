@@ -4,7 +4,7 @@
 
 - ✅ **v1 MVP** — Phases 1-6 (shipped 2026-02-22)
 - ✅ **v0.1.0 Release & Deploy** — Phases 7-9 (shipped 2026-02-22)
-- 🚧 **v0.1.1 UX Polish & Manual Brew** — Phases 10-12 (in progress)
+- ✅ **v0.1.1 UX Polish & Manual Brew** — Phases 10-12 (shipped 2026-02-22)
 
 ## Phases
 
@@ -46,7 +46,7 @@ Plans:
 
 </details>
 
-### 🚧 v0.1.1 UX Polish & Manual Brew (In Progress)
+### ✅ v0.1.1 UX Polish & Manual Brew — SHIPPED 2026-02-22
 
 **Milestone Goal:** Make the app feel right on every screen, eliminate lazy-default UX traps, and let users record brews without waiting for BayBE recommendations.
 
@@ -81,7 +81,7 @@ Plans:
 - [x] 11-01-PLAN.md — Inactive taste slider + submit gate (UX-01, UX-02)
 - [x] 11-02-PLAN.md — No-bean prompt on /brew (FLOW-01)
 
-#### Phase 12: Manual Brew Input
+#### Phase 12: Manual Brew Input ✅ COMPLETE
 
 **Goal:** User can record any brew manually with all parameters and a taste score, and it feeds into BayBE optimization
 **Depends on:** Phase 11 (taste slider inactive pattern applies to manual form; no-bean prompt pattern reused)
@@ -94,10 +94,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — DB migration (is_manual) + brew page restructure + record endpoint
-- [ ] 12-02-PLAN.md — Manual brew form with editable params + toggleFailed extraction
-- [ ] 12-03-PLAN.md — Manual badge in history + batch delete with campaign rebuild
-- [ ] 12-04-PLAN.md — Adaptive parameter range extension
+- [x] 12-01-PLAN.md — DB migration (is_manual) + brew page restructure + record endpoint
+- [x] 12-02-PLAN.md — Manual brew form with editable params + toggleFailed extraction
+- [x] 12-03-PLAN.md — Manual badge in history + batch delete with campaign rebuild
+- [x] 12-04-PLAN.md — Adaptive parameter range extension
 
 ## Progress
 
@@ -111,4 +111,4 @@ Plans:
 | 9 | v0.1.0 | 1/1 | Complete | 2026-02-22 |
 | 10. Responsive Nav & Layout | v0.1.1 | 2/2 | ✅ Complete | 2026-02-22 |
 | 11. Brew UX Improvements | v0.1.1 | 2/2 | ✅ Complete | 2026-02-22 |
-| 12. Manual Brew Input | v0.1.1 | 0/4 | Not started | - |
+| 12. Manual Brew Input | v0.1.1 | 4/4 | ✅ Complete | 2026-02-22 |

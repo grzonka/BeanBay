@@ -1,14 +1,14 @@
 # Project State: BeanBay
 
 **Last updated:** 2026-02-22
-**Current phase:** Phase 12 — Manual Brew Input (in progress)
+**Current phase:** Phase 12 — Manual Brew Input (complete) ✅
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Every coffee brew teaches the system something — the app must make it effortless to capture that feedback from a phone at the espresso machine and return increasingly better recommendations.
-**Current focus:** v0.1.1 — UX Polish & Manual Brew
+**Current focus:** v0.1.1 — UX Polish & Manual Brew ✅ SHIPPED
 
 ## Milestone History
 
@@ -16,23 +16,23 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 |-----------|--------|-------|--------|------|
 | v1 MVP | 1-6 | 16 | ✅ Shipped | 2026-02-22 |
 | v0.1.0 Release & Deploy | 7-9 | 5 | ✅ Shipped | 2026-02-22 |
-| v0.1.1 UX Polish & Manual Brew | 10-12 | TBD | 🚧 In progress | — |
+| v0.1.1 UX Polish & Manual Brew | 10-12 | 11 | ✅ Shipped | 2026-02-22 |
 
 ## Current Position
 
-Phase: 12 of 12 (Manual Brew Input) — Plan 3 of TBD complete
-Plan: 3 of TBD — 12-03 complete
-Status: In progress — ready for Plan 12-04
-Last activity: 2026-02-22 — Completed 12-03-PLAN.md (Manual badge in history rows/modal, batch delete with BayBE campaign rebuild, 7 new tests, 126 total)
+Phase: 12 of 12 (Manual Brew Input) — Plan 4 of 4 complete
+Plan: 4 of 4 — 12-04 complete
+Status: ✅ Phase 12 complete — v0.1.1 milestone complete
+Last activity: 2026-02-22 — Completed 12-04-PLAN.md (adaptive range extension, 4 new tests, 130 total)
 
-Progress: [███████████████████████████████████████████░] ~94% (28 plans complete, v0.1.1 in progress)
+Progress: [████████████████████████████████████████████] 100% (32 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-  - Total plans completed: 28 (v1: 16, v0.1.0: 5, v0.1.1: 7)
-  - v0.1.1 plans completed: 7 (phase 10: 2, phase 11: 2, phase 12: 3)
-- v0.1.1 total plans: TBD (refined during planning)
+  - Total plans completed: 32 (v1: 16, v0.1.0: 5, v0.1.1: 11)
+  - v0.1.1 plans completed: 11 (phase 10: 2, phase 11: 2, phase 12: 4+1 quick task)
+  - v0.1.1 total plans: 11
 
 ## Accumulated Context
 
@@ -52,6 +52,8 @@ See: .planning/PROJECT.md (Key Decisions table)
 | 12 | hidden(no) + checkbox(yes) for saturation | HTML checkbox submits nothing when unchecked; hidden ensures saturation=no always present |
 | 12 | Delete checkbox uses form attribute (not nested) | Checkbox inside shot card, outside delete form; HTML form= attribute links it regardless of DOM nesting |
 | 12 | Capture shot IDs before delete in tests | SQLAlchemy raises ObjectDeletedError accessing deleted instance attrs after expire_all() |
+| 12 | Remove min/max from number inputs; use data-min/data-max | Lets users type out-of-range values to trigger range extension flow |
+| 12 | fetch extend-ranges then form.submit() | Ensures bounds update persists before /brew/record validates; no page reload needed |
 
 ### Branding
 - **Name:** BeanBay | **Domain:** beanbay.coffee
@@ -67,12 +69,12 @@ See: .planning/PROJECT.md (Key Decisions table)
 
 ### Last Session
 - **Date:** 2026-02-22
-- **What happened:** Executed 12-03-PLAN.md — Manual badge (blue #3b82f6) in history rows and modal; `is_manual` added to all three shot dicts; batch delete via POST /history/delete-batch with BayBE campaign rebuild per affected bean; delete mode toggle button + sticky action bar + per-row checkboxes; 7 new tests (19→26 history, 126 total).
-- **Where we left off:** Phase 12 Plan 3 complete. Ready for Plan 12-04 (next plan in phase).
+- **What happened:** Executed 12-04-PLAN.md — POST /brew/extend-ranges endpoint updates Bean.parameter_overrides; client-side out-of-range detection on manual form with confirm() prompt + fetch before submit; data-min/data-max/data-param on number inputs; 4 new tests (130 total). Phase 12 complete, v0.1.1 milestone shipped.
+- **Where we left off:** All phases complete. v0.1.1 done.
 
 ### Next Steps
-1. Execute Phase 12 Plan 04 (see .planning/phases/12-manual-brew-input/12-04-PLAN.md)
+No planned next steps. v0.1.1 is complete. Start a new milestone planning session when ready for v0.1.2.
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-22 after completing 12-03 manual badge + batch delete*
+*Last updated: 2026-02-22 after completing 12-04 adaptive range extension — v0.1.1 SHIPPED*
