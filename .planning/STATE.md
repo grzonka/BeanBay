@@ -1,14 +1,14 @@
 # Project State: BrewFlow
 
 **Last updated:** 2026-02-22
-**Current phase:** Phase 3 complete — verified 9/9 must-haves, 65/65 tests passing. Ready for Phase 4.
+**Current phase:** Phase 4 in progress — 2/3 plans complete.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-02-21)
 
 **Core value:** Every espresso shot teaches the system something — the app must make it effortless to capture feedback from a phone at the espresso machine and return increasingly better recommendations.
-**Current focus:** Phase 3 fully complete — 2 UAT gaps fixed (Repeat Best dedup + active bean deselect). Ready for Phase 4.
+**Current focus:** Phase 4 (Shot History & Feedback Depth) — history view complete, ready for shot detail modal.
 
 ## Phase Status
 
@@ -17,11 +17,11 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 | 1 | Foundation & Infrastructure | ● Complete | 3/3 | 100% |
 | 2 | Bean Management & Mobile Shell | ● Complete | 2/2 | 100% |
 | 3 | Optimization Loop | ● Complete | 2/2 | 100% |
-| 4 | Shot History & Feedback Depth | ○ Not started | 0/0 | 0% |
+| 4 | Shot History & Feedback Depth | ◑ In progress | 2/3 | 67% |
 | 5 | Insights & Trust | ○ Not started | 0/0 | 0% |
 | 6 | Analytics & Exploration | ○ Not started | 0/0 | 0% |
 
-**Overall progress:** █████████░░░░░░░░░░░ ~47% (8/~17 estimated plans)
+**Overall progress:** ██████████░░░░░░░░░░ ~55% (10/~17 estimated plans)
 
 ## Active Decisions
 
@@ -37,6 +37,12 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 - **[03-02]** Fresh UUID per `/brew/best` visit for `recommendation_id` — page-visit scoped, not stored
 - **[03-02]** `POST /beans/deactivate` placed before `/{bean_id}` wildcard to avoid FastAPI routing ambiguity
 - **[03-02]** Cookie deletion test pattern: assert `Max-Age=0` in Set-Cookie header, manually clear client cookie jar
+- **[04-01]** `flavor_tags` stored as String (JSON-encoded) not JSON column type — SQLite compatibility
+- **[04-01]** Untouched flavor sliders: JS strips `name` attribute on form submit — null not 0 saved to DB
+- **[04-01]** Startup ALTER TABLE migration in lifespan for existing databases (inspect + ALTER TABLE)
+- **[04-02]** htmx filter pattern: each select uses hx-include to send sibling field — no submit button needed
+- **[04-02]** Shot enrichment in router: plain dicts with bean_name pre-computed — avoids lazy-load issues post-session
+- **[04-02]** min_taste normalized to int in router when whole number — ensures Jinja `selected` comparison works
 
 ## Blockers
 
@@ -59,6 +65,8 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 - HTML form delete: POST /beans/{id}/delete (forms can't send DELETE method)
 - Failed shots: is_failed=true auto-sets taste=1 in router before DB write
 - Best recipe: excludes failed shots (is_failed=False filter), highest taste wins
+- Feedback panel: collapsible partial `_feedback_panel.html`, included in brew forms; notes + 6 flavor sliders + tag input
+- History view: GET /history (full page) + GET /history/shots (htmx partial); filters by bean + min taste; shot rows with date/taste/grind/failed/notes indicators; modal scaffold for Plan 03
 
 ### Research Flags
 - ~~Phase 1: Investigate discrete vs continuous BayBE parameters~~ RESOLVED: hybrid approach works, 7.5KB files
@@ -72,13 +80,12 @@ See: .planning/PROJECT.md (updated 2026-02-21)
 
 ### Last Session
 - **Date:** 2026-02-22
-- **What happened:** Executed plan 03-02 (gap closure). Fixed 2 UAT gaps: (1) Repeat Best deduplication — replaced hardcoded `best-{{ best.id }}` with fresh UUID per visit; (2) Active bean deselect — added `POST /beans/deactivate`, Deselect button on detail page, ✕ button in nav. 5 new tests. 65/65 tests pass. Phase 3 verified: 9/9 must-haves confirmed in codebase.
-- **Where we left off:** Phase 3 fully complete. Ready to plan and execute Phase 4.
+- **What happened:** Executed plan 04-02 (shot history view). Created GET /history + GET /history/shots endpoints with bean + taste score filters. 4 templates (index, filter panel, shot list, shot row). History nav link. Bean detail "View History" deep-link. ~100 lines CSS. 10 new tests. 78/78 tests pass.
+- **Where we left off:** Phase 4 plan 2/3 complete. Ready for 04-03 (shot detail modal).
 
 ### Next Steps
-1. Plan Phase 4: Shot History & Feedback Depth
+1. Execute Phase 4 plan 03: Shot detail modal
 2. After Phase 4: begin Phase 5 (Insights & Trust)
-3. Consider manual brew input as Phase 4 plan or standalone
 
 ---
 *State initialized: 2026-02-21*
