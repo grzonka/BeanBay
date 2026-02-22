@@ -61,7 +61,7 @@ Ship the existing v1 MVP as a properly branded, documented, and deployable produ
 |----|-------------|-------|--------|
 | BRAND-01 | Rename BrewFlow to BeanBay in all code/config/templates | 7 | Complete |
 | BRAND-02 | Update UI title, headers, meta tags | 7 | Complete |
-| BRAND-03 | Create app icon/logo | 9 | Pending |
+| BRAND-03 | Create app icon/logo | 9 | Deferred |
 | CLEAN-01 | Remove legacy files (my_espresso.py, __marimo__/) | 7 | Complete |
 | CLEAN-02 | Remove dead app/routes/ directory | 7 | Complete |
 | CLEAN-03 | Create comprehensive README.md | 8 | Complete |
@@ -70,9 +70,9 @@ Ship the existing v1 MVP as a properly branded, documented, and deployable produ
 | DEBT-02 | Persist pending_recommendations | 7 | Complete |
 | DEBT-03 | Move ALTER TABLE to Alembic migration | 7 | Complete |
 | DEBT-04 | Surface error on invalid override parsing | 7 | Complete |
-| DEPLOY-01 | Update Docker files with BeanBay naming | 9 | Pending |
-| DEPLOY-02 | Publish Docker image to ghcr.io | 9 | Pending |
+| DEPLOY-01 | Update Docker files with BeanBay naming | 9 | Complete |
+| DEPLOY-02 | Publish Docker image to ghcr.io | 9 | Complete |
 | DEPLOY-03 | GitHub Actions CI/CD workflow | 8 | Complete |
-| DEPLOY-04 | Unraid Community Apps XML template | 9 | Pending |
+| DEPLOY-04 | Unraid Community Apps XML template | 9 | Complete |
 | REL-01 | Create GitHub release v0.1.0 | 8 | Complete |
 | REL-02 | All 108+ tests pass after rebrand | 7 | Complete |
