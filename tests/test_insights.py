@@ -182,3 +182,58 @@ def test_insights_nav_link(client, mock_optimizer):
     response = client.get("/beans")
     assert response.status_code == 200
     assert 'href="/insights"' in response.text
+
+
+# ---------------------------------------------------------------------------
+# Heatmap tests
+# ---------------------------------------------------------------------------
+
+
+def test_insights_heatmap_no_data(client, sample_bean, db, mock_optimizer):
+    """Bean with < 3 shots → heatmap shows empty state message, not chart canvas."""
+    # Seed 2 shots (below the 3-shot threshold)
+    _seed_shot(db, sample_bean.id, taste=6.5)
+    _seed_shot(db, sample_bean.id, taste=7.0)
+
+    client.cookies.set("active_bean_id", sample_bean.id)
+    response = client.get("/insights")
+    assert response.status_code == 200
+    # Heatmap empty state shown
+    assert "Pull at least 3 shots to see the parameter map." in response.text
+    # Heatmap canvas NOT present
+    assert "heatmapChart" not in response.text
+
+
+def test_insights_heatmap_with_data(client, sample_bean, db, mock_optimizer):
+    """Bean with 4+ shots → heatmap chart rendered with correct canvas and section title."""
+    _seed_shot(db, sample_bean.id, taste=5.0, is_failed=False)
+    _seed_shot(db, sample_bean.id, taste=7.5, is_failed=False)
+    _seed_shot(db, sample_bean.id, taste=8.5, is_failed=False)
+    _seed_shot(db, sample_bean.id, taste=9.0, is_failed=False)
+
+    client.cookies.set("active_bean_id", sample_bean.id)
+    response = client.get("/insights")
+    assert response.status_code == 200
+    # Heatmap canvas rendered
+    assert "heatmapChart" in response.text
+    # Section title present
+    assert "Parameter Map" in response.text
+    # Grind and temperature values from seeded measurements appear in heatmap_data JSON blob
+    assert '"x": 20.0' in response.text
+    assert '"y": 93.0' in response.text
+
+
+def test_insights_heatmap_failed_shots_distinct(client, sample_bean, db, mock_optimizer):
+    """Bean with normal + failed shots → heatmap_data JSON includes a point with is_failed: true."""
+    _seed_shot(db, sample_bean.id, taste=7.0, is_failed=False)
+    _seed_shot(db, sample_bean.id, taste=8.0, is_failed=False)
+    _seed_shot(db, sample_bean.id, taste=9.0, is_failed=False)
+    _seed_shot(db, sample_bean.id, taste=1.0, is_failed=True)
+
+    client.cookies.set("active_bean_id", sample_bean.id)
+    response = client.get("/insights")
+    assert response.status_code == 200
+    # The heatmap canvas is present (4 shots total)
+    assert "heatmapChart" in response.text
+    # The JSON data blob contains a failed point
+    assert '"is_failed": true' in response.text
