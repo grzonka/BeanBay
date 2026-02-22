@@ -1,0 +1,11 @@
+{# Convergence status badge — shows optimization progress in plain language.
+   Context: convergence dict with status, label, description, color
+#}
+{% if convergence %}
+<div class="convergence-badge-container">
+  <span class="convergence-badge convergence-{{ convergence.color }}">
+    {{ convergence.label }}
+  </span>
+  <p class="convergence-description">{{ convergence.description }}</p>
+</div>
+{% endif %}
