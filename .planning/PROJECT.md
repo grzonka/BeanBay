@@ -14,8 +14,8 @@ Every coffee brew teaches the system something — the app must make it effortle
 
 ## Current State
 
-**Shipped:** v1 MVP (2026-02-22) — as "BrewFlow" (being rebranded to BeanBay in v0.1.0)
-**Active milestone:** v0.1.0 Release & Deploy
+**Shipped:** v1 MVP (2026-02-22), v0.1.0 Release & Deploy (2026-02-22)
+**Active milestone:** v0.1.1 UX Polish & Manual Brew
 **Codebase:** ~7,632 LOC (Python, HTML, CSS/JS), 108 tests passing
 **Stack:** FastAPI, Jinja2/htmx, SQLite, Chart.js, BayBE, Docker
 
@@ -37,7 +37,7 @@ Every coffee brew teaches the system something — the app must make it effortle
 
 ### Active
 
-See `.planning/REQUIREMENTS.md` for v0.1.0 requirements (rebrand, cleanup, deploy).
+See `.planning/REQUIREMENTS.md` for v0.1.1 requirements (UX polish, manual brew, responsive layout).
 
 ### Out of Scope (current milestone)
 
@@ -57,7 +57,8 @@ See `.planning/REQUIREMENTS.md` for v0.1.0 requirements (rebrand, cleanup, deplo
 - **BayBE:** Hybrid search space (5 continuous + 1 categorical), ~7.5KB campaign files. Three-phase optimization: random (0-4 shots) → Learning (5-7) → Bayesian optimization (8+).
 - **Usage pattern:** Primarily phone at the espresso machine. Quick interactions most days, occasional deep tasting sessions on laptop.
 - **Deployment:** Unraid server via Docker. Single container, SQLite + BayBE JSON campaign files in persistent volume. Also available to any Docker user.
-- **Known tech debt:** Duplicated helper, dead directory, in-memory session state, startup migration outside Alembic. See milestones/v1-MILESTONE-AUDIT.md.
+- **Known tech debt:** v1 tech debt resolved in Phase 7. See milestones/v1-MILESTONE-AUDIT.md.
+- **UX feedback (v0.1.1):** Navigation tabs don't scale on mobile (too many items, bean name wraps). Desktop layout is phone-sized centered — doesn't use widescreen space. Taste score defaults to 7, encouraging lazy submissions.
 
 ## Constraints
 
@@ -82,16 +83,7 @@ See `.planning/REQUIREMENTS.md` for v0.1.0 requirements (rebrand, cleanup, deplo
 | SQLite as database | Single-user, embedded, no separate DB server | ✓ Good — zero ops overhead |
 | Chart.js for visualization | CDN-loaded, no build step, rich chart types | ✓ Good — progress charts + heatmaps working |
 | Measurements as source of truth | Campaigns rebuildable from measurement data | ✓ Good — disaster recovery works |
-| Rebrand to BeanBay | Better name — "bean" first, "bay" as gathering place + Bayesian hint | v0.1.0 — in progress |
-
-## Milestone Roadmap
-
-| Milestone | Focus | Status |
-|-----------|-------|--------|
-| v1 MVP | Core espresso optimization loop | ✓ Shipped |
-| v0.1.0 Release & Deploy | Rebrand, cleanup, Docker/Unraid deployment | Active |
-| v2 Multi-Method Platform | Filter/immersion brewing, grinders, waters, Beanconqueror import | Planned |
-| v3 Community Platform | Multi-user, shared database, hosted solution | Vision |
+| Rebrand to BeanBay | Better name — "bean" first, "bay" as gathering place + Bayesian hint | ✓ Good — v0.1.0 shipped |
 
 ---
-*Last updated: 2026-02-22 after v0.1.0 milestone planning*
+*Last updated: 2026-02-22 after v0.1.1 milestone start*
