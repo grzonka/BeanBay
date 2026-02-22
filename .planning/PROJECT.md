@@ -15,7 +15,7 @@ Every coffee brew teaches the system something — the app must make it effortle
 ## Current State
 
 **Shipped:** v1 MVP, v0.1.0, v0.1.1 (all 2026-02-22)
-**Active milestone:** None — planning next
+**Active milestone:** v0.2.0 — Multi-method brewing, equipment management, transfer learning
 **Codebase:** ~8,295 LOC (Python, HTML, CSS/JS), 130 tests passing
 **Stack:** FastAPI, Jinja2/htmx, SQLite, Chart.js, BayBE, Docker
 
@@ -43,26 +43,27 @@ Every coffee brew teaches the system something — the app must make it effortle
 - ✓ Manual brews feed into BayBE optimization via add_measurement — v0.1.1
 - ✓ Manual brews visually distinguishable in shot history (blue badge) — v0.1.1
 
-### Active
+### Active (v0.2.0)
 
-No active requirements. Start next milestone with `/gsd-new-milestone`.
+- **Multi-method brewing** — Support espresso, pour-over (V60 etc.), and other methods. Each method has its own parameter set (e.g., V60 adds bloom). Users configure brewer + paper + water + bean combinations.
+- **Equipment management** — Users create equipment items (grinders, brewers/machines, papers, water recipes) and assemble them into "brew setups." Equipment is context for optimization, not a BayBE variable. A campaign = bean + method + equipment combo.
+- **Grinder management** — Support multiple grinders with different dial types (stepped vs stepless). Grind setting is specific to the grinder context.
+- **Water tracking** — Named water recipes (e.g., "Volvic", "Third Wave Water") with optional mineral composition and notes for how it was made.
+- **Enhanced bean metadata** — Roast date, origin, process, variety (all optional). A "coffee" can have multiple bags (buying the same coffee twice). Optional cost per bag.
+- **Cross-brew intelligence via BayBE transfer learning** — When starting a new bean with known properties (process + variety), seed BayBE's first recommendation using transfer learning (TaskParameter) from history of similar beans, rather than random exploration.
 
 ### Out of Scope (current milestone)
 
 - Multi-user accounts — v3 vision
-- Multi-method brewing (filter, immersion) — v2
-- Grinder management with dial types — v2
-- Water tracking — v2
-- Beanconqueror import — v2
-- Enhanced bean metadata (roast date, origin, process) — v2
-- Cross-brew intelligence / recommendation from similar brews — v2
 - Community/shared database — v3
+- Beanconqueror import — backlog (deferred from v0.2)
 
 ## Context
 
 - **Shipped v1:** 6 phases, 16 plans, 108 tests, ~7,632 LOC across Python/HTML/CSS/JS
 - **Shipped v0.1.0:** 3 phases, 5 plans. Rebrand, CI/CD, Docker image, Unraid template.
 - **Shipped v0.1.1:** 3 phases, 8 plans, 130 tests, ~8,295 LOC. Responsive nav, taste UX, manual brew.
+- **v0.2.0 scope:** Multi-method brewing, equipment management (grinders, brewers, papers, water), enhanced bean metadata (bags, process, variety), cross-brew transfer learning via BayBE TaskParameter.
 - **Hardware setup:** Sage Dual Boiler (Slayer mod) + DF83v grinder. Parameters tuned to this specific machine's ranges.
 - **BayBE:** Hybrid search space (5 continuous + 1 categorical), ~7.5KB campaign files. Three-phase optimization: random (0-4 shots) -> Learning (5-7) -> Bayesian optimization (8+).
 - **Usage pattern:** Primarily phone at the espresso machine. Quick interactions most days, occasional deep tasting sessions on laptop.
@@ -73,8 +74,8 @@ No active requirements. Start next milestone with `/gsd-new-milestone`.
 
 - **Backend language**: Python — BayBE is a Python library, no way around it
 - **Optimization engine**: BayBE — already proven, campaign state is JSON-serializable
-- **Parameters**: Fixed set of 6 parameters with current ranges (matched to Sage Dual Boiler + DF83v) — v2 will make this configurable
-- **Single user**: v1/v0.1.0 is personal use only, no auth needed
+- **Parameters**: Configurable per brew method — espresso has 6 params (current), pour-over has its own set. Grind setting is grinder-specific.
+- **Single user**: Personal use only, no auth needed
 - **Self-hosted**: Must run on local server via Docker (Unraid or any Docker host)
 
 ## Key Decisions
@@ -99,6 +100,9 @@ No active requirements. Start next milestone with `/gsd-new-milestone`.
 | Inline no-bean prompt | Silent redirect confusing on mobile; keeps user in context | ✓ Good — clear guidance |
 | Manual brew with BayBE integration | Users need to record brews outside recommendation flow | ✓ Good — feeds optimization |
 | Adaptive parameter ranges | Manual brews may exceed default ranges; confirm + extend | ✓ Good — flexible without breaking optimizer |
+| Equipment as context (v0.2) | Equipment defines experiment context; BayBE optimizes recipe variables within that context | Decided — comparison between setups at analytics level |
+| Transfer learning via TaskParameter (v0.2) | BayBE TaskParameter enables cross-bean cold-start seeding from similar beans | Validated — feasible with matching search spaces |
+| Bean bags model (v0.2) | A "coffee" can have multiple bags; same coffee bought twice shares identity | Decided — supports transfer learning similarity matching |
 
 ---
-*Last updated: 2026-02-22 after v0.1.1 milestone*
+*Last updated: 2026-02-22 after v0.2.0 milestone kickoff*

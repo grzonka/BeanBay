@@ -1,5 +1,24 @@
 # Project Milestones: BeanBay
 
+## v0.2.0 Multi-Method & Intelligence (In Progress)
+
+**Goal:** Transform BeanBay from espresso-only to a multi-method coffee optimization platform with equipment management, enhanced bean metadata, and cross-brew transfer learning.
+
+**Phases planned:** 13-16
+
+**Key features:**
+- Multi-method brewing (espresso, pour-over, other) with method-specific parameters
+- Equipment management (grinders, brewers, papers, water recipes) assembled into brew setups
+- Enhanced bean metadata (process, variety, roast date) with multiple bags per coffee
+- Cross-brew intelligence via BayBE transfer learning (TaskParameter) — new beans learn from similar beans
+
+**Key design decisions:**
+- Equipment as context, not BayBE variable — optimization happens within equipment context
+- BayBE TaskParameter for transfer learning — training tasks from similar beans seed new campaigns
+- Bean bags model — same coffee bought twice shares identity
+
+---
+
 ## v0.1.1 UX Polish & Manual Brew (Shipped: 2026-02-22)
 
 **Delivered:** Responsive navigation (mobile hamburger/drawer, desktop sidebar), deliberate taste scoring (inactive slider with submit gate), no-bean prompt, and full manual brew input that feeds directly into BayBE optimization.
