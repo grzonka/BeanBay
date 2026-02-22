@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — BrewFlow{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Analytics</h1>
+</div>
+
+{% if stats.total_shots == 0 %}
+<div class="empty-state">
+  <div class="empty-state-title">No shots yet</div>
+  <p class="empty-state-text">Pull some shots to see analytics.</p>
+  <a href="/brew" class="btn btn-primary">Start Brewing</a>
+</div>
+{% else %}
+
+<!-- Aggregate stats card -->
+<div class="card mb-md">
+  <h2 class="card-title mb-md">Brew Statistics</h2>
+  {% include "analytics/_stats_card.html" %}
+</div>
+
+<!-- Cross-bean comparison -->
+<div class="card mb-md">
+  <h2 class="card-title mb-md">Best Recipes by Bean</h2>
+  {% include "analytics/_comparison_table.html" %}
+</div>
+
+{% endif %}
+
+<!-- Back link -->
+<div class="brew-actions">
+  <a href="/brew" class="btn btn-secondary btn-full">Back to Brew</a>
+</div>
+{% endblock %}
