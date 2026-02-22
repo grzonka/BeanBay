@@ -447,7 +447,6 @@ def test_show_best_brew_again_creates_new_measurement(active_client, sample_bean
 
 def test_record_with_notes(active_client, sample_bean, db_session):
     """POST /brew/record with notes field saves notes to DB."""
-    import json as _json
     from unittest.mock import MagicMock
 
     rec_id = str(uuid.uuid4())
@@ -533,8 +532,6 @@ def test_record_with_flavor_tags(active_client, sample_bean, db_session):
 
 def test_recommendation_shows_insights(active_client, sample_bean):
     """GET /brew/recommend/{id} shows phase_label from insights in the response."""
-    from unittest.mock import MagicMock
-
     rec_id = str(uuid.uuid4())
     rec = _make_rec(rec_id)
     rec["insights"] = {
@@ -559,8 +556,6 @@ def test_recommendation_shows_insights(active_client, sample_bean):
 
 def test_recommendation_insights_no_prediction_first_shot(active_client, sample_bean):
     """First recommendation (random phase) shows no predicted_range in response."""
-    from unittest.mock import MagicMock
-
     rec_id = str(uuid.uuid4())
     rec = _make_rec(rec_id)
     rec["insights"] = {

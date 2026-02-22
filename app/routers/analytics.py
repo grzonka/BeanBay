@@ -1,7 +1,5 @@
 """Analytics router — aggregate brew statistics and cross-bean recipe comparison."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates

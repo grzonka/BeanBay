@@ -1,7 +1,5 @@
 """Integration tests for BayBE OptimizerService."""
 
-from pathlib import Path
-
 import pandas as pd
 import pytest
 

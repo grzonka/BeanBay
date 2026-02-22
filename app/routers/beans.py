@@ -185,7 +185,6 @@ async def update_overrides(
         bean_data = _bean_with_shot_count(db, bean)
         active_bean = _get_active_bean(request, db)
         error_msg = f"Invalid values for: {', '.join(invalid_params)}. Please enter numbers only."
-        from fastapi.responses import HTMLResponse as _HTMLResponse
 
         return templates.TemplateResponse(
             request,

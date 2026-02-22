@@ -1,14 +1,11 @@
 """Insights router — optimization progress, convergence, and trust signals."""
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.bean import Bean
 from app.models.measurement import Measurement
 from app.routers.beans import _get_active_bean
 
