@@ -1,6 +1,3 @@
-# Example repo (not part of this project)
-baybe-resources/
-
 # Data (local database & campaign state)
 data/
 
@@ -11,8 +8,16 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# marimo
+# Tools
+.ruff_cache/
+.pytest_cache/
+
+# Legacy (pre-BeanBay, removed in v1.1)
+__marimo__/
 .marimo/
+my_espresso.py
+requirements.txt
+baybe-resources/
 
 # OS
 .DS_Store
