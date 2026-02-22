@@ -594,3 +594,110 @@ body {
   font-weight: 600;
   color: var(--danger);
 }
+
+/* Feedback panel */
+.feedback-panel { margin-top: var(--spacing-md); }
+
+.feedback-notes {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+/* Flavor dimension sliders */
+.flavor-dimensions { margin-top: var(--spacing-sm); }
+
+.flavor-slider-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 30px;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: 40px;
+}
+
+.flavor-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.flavor-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  outline: none;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.flavor-slider.touched { opacity: 1; }
+
+.flavor-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-primary);
+}
+
+.flavor-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg-primary);
+}
+
+.flavor-value {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 600;
+  min-width: 20px;
+}
+
+/* Tag input */
+.tag-input-container { margin-top: var(--spacing-xs); }
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.tag-chip-remove:hover { color: var(--danger); }
+
+.tag-text-input {
+  min-height: 36px;
+}

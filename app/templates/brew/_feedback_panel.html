@@ -1,0 +1,54 @@
+{# Reusable feedback panel — notes, flavor dimensions, flavor tags.
+   Include inside a <form> that POSTs to /brew/record.
+   Collapsed by default — never blocks the quick taste-score path. #}
+
+<div class="feedback-panel">
+  <button type="button" class="collapsible-toggle"
+    onclick="this.nextElementSibling.classList.toggle('open'); this.setAttribute('aria-expanded', this.nextElementSibling.classList.contains('open'))"
+    aria-expanded="false">
+    More Feedback (optional)
+    <span aria-hidden="true">&#9662;</span>
+  </button>
+
+  <div class="collapsible-content">
+    <!-- Notes -->
+    <div class="form-group">
+      <label class="form-label" for="notes">Notes</label>
+      <textarea id="notes" name="notes" class="form-input feedback-notes"
+        placeholder="Tasting notes, observations..." rows="2"></textarea>
+    </div>
+
+    <!-- Flavor dimensions (6 sliders) -->
+    <div class="flavor-dimensions">
+      <p class="form-label mb-sm">Flavor Profile</p>
+      {% for dim in ["acidity", "sweetness", "body", "bitterness", "aroma", "intensity"] %}
+      <div class="flavor-slider-row">
+        <label class="flavor-label" for="flavor-{{ dim }}">{{ dim | capitalize }}</label>
+        <input type="range" id="flavor-{{ dim }}" name="{{ dim }}"
+          class="flavor-slider" min="1" max="5" step="1" value="3"
+          data-touched="false"
+          oninput="this.dataset.touched='true'; this.classList.add('touched'); document.getElementById('flavor-val-{{ dim }}').textContent=this.value">
+        <span class="flavor-value" id="flavor-val-{{ dim }}">-</span>
+      </div>
+      {% endfor %}
+      <p class="form-hint">Slide to rate — untouched sliders won't be saved.</p>
+    </div>
+
+    <!-- Flavor tags -->
+    <div class="form-group mt-md">
+      <label class="form-label">Flavor Tags (up to 10)</label>
+      <div class="tag-input-container" id="tag-container">
+        <div class="tag-list" id="tag-list"></div>
+        <input type="text" id="tag-input" class="form-input tag-text-input"
+          placeholder="Type a flavor (e.g. chocolate, citrus)..."
+          list="flavor-suggestions" autocomplete="off">
+        <datalist id="flavor-suggestions">
+          {% for tag in ["chocolate", "caramel", "nutty", "fruity", "citrus", "berry", "floral", "honey", "vanilla", "spicy", "earthy", "smoky", "woody", "herbal", "tropical", "stone fruit", "dried fruit", "brown sugar", "toffee", "roasted", "bright", "clean", "complex", "balanced", "creamy", "syrupy", "winey", "tea-like", "malty", "cocoa"] %}
+          <option value="{{ tag }}">
+          {% endfor %}
+        </datalist>
+      </div>
+      <input type="hidden" name="flavor_tags" id="flavor-tags-hidden" value="">
+    </div>
+  </div>
+</div>

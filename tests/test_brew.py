@@ -208,7 +208,9 @@ def test_show_recommendation_expired_redirects(active_client):
 # ---------------------------------------------------------------------------
 
 
-def _record_payload(rec_id: str, taste: float = 8.0, is_failed: str | None = None) -> dict:
+def _record_payload(
+    rec_id: str, taste: float = 8.0, is_failed: str | None = None, **kwargs
+) -> dict:
     payload = {
         "recommendation_id": rec_id,
         "grind_setting": "20.0",
@@ -221,6 +223,7 @@ def _record_payload(rec_id: str, taste: float = 8.0, is_failed: str | None = Non
     }
     if is_failed is not None:
         payload["is_failed"] = is_failed
+    payload.update(kwargs)
     return payload
 
 
@@ -442,3 +445,89 @@ def test_show_best_brew_again_creates_new_measurement(active_client, sample_bean
     db.expire_all()
     count = db.query(Measurement).filter(Measurement.bean_id == sample_bean.id).count()
     assert count == 3
+
+
+# ---------------------------------------------------------------------------
+# Feedback panel — notes, flavor dimensions, flavor tags
+# ---------------------------------------------------------------------------
+
+
+def test_record_with_notes(active_client, sample_bean, db):
+    """POST /brew/record with notes field saves notes to DB."""
+    import json as _json
+    from unittest.mock import MagicMock
+
+    rec_id = str(uuid.uuid4())
+    mock_optimizer = MagicMock()
+    mock_optimizer.recommend = AsyncMock()
+    app.state.optimizer = mock_optimizer
+
+    payload = _record_payload(rec_id, taste=7.5, notes="Nice fruity finish, slightly sharp")
+    response = active_client.post("/brew/record", data=payload)
+    assert response.status_code == 303
+
+    db.expire_all()
+    m = db.query(Measurement).filter(Measurement.recommendation_id == rec_id).first()
+    assert m is not None
+    assert m.notes == "Nice fruity finish, slightly sharp"
+
+
+def test_record_with_flavor_dimensions(active_client, sample_bean, db):
+    """POST /brew/record with flavor dimension sliders saves only touched values."""
+    from unittest.mock import MagicMock
+
+    rec_id = str(uuid.uuid4())
+    mock_optimizer = MagicMock()
+    mock_optimizer.recommend = AsyncMock()
+    app.state.optimizer = mock_optimizer
+
+    # Only acidity and sweetness submitted (simulating touched sliders)
+    payload = _record_payload(rec_id, taste=8.0, acidity="3", sweetness="4")
+    response = active_client.post("/brew/record", data=payload)
+    assert response.status_code == 303
+
+    db.expire_all()
+    m = db.query(Measurement).filter(Measurement.recommendation_id == rec_id).first()
+    assert m is not None
+    assert m.acidity == 3.0
+    assert m.sweetness == 4.0
+    # Other dimensions not submitted — should be None
+    assert m.body is None
+    assert m.bitterness is None
+    assert m.aroma is None
+    assert m.intensity is None
+
+
+def test_record_with_flavor_tags(active_client, sample_bean, db):
+    """POST /brew/record with flavor_tags saves as JSON list; max 10 enforced."""
+    import json as _json
+    from unittest.mock import MagicMock
+
+    rec_id = str(uuid.uuid4())
+    mock_optimizer = MagicMock()
+    mock_optimizer.recommend = AsyncMock()
+    app.state.optimizer = mock_optimizer
+
+    # Submit 3 tags as comma-separated string
+    payload = _record_payload(rec_id, taste=8.5, flavor_tags="chocolate,citrus,fruity")
+    response = active_client.post("/brew/record", data=payload)
+    assert response.status_code == 303
+
+    db.expire_all()
+    m = db.query(Measurement).filter(Measurement.recommendation_id == rec_id).first()
+    assert m is not None
+    assert m.flavor_tags is not None
+    parsed = _json.loads(m.flavor_tags)
+    assert parsed == ["chocolate", "citrus", "fruity"]
+
+    # Test max 10 enforced — submit 12 tags
+    rec_id2 = str(uuid.uuid4())
+    all_tags = "a,b,c,d,e,f,g,h,i,j,k,l"  # 12 tags
+    payload2 = _record_payload(rec_id2, taste=7.0, flavor_tags=all_tags)
+    active_client.post("/brew/record", data=payload2)
+
+    db.expire_all()
+    m2 = db.query(Measurement).filter(Measurement.recommendation_id == rec_id2).first()
+    assert m2 is not None
+    parsed2 = _json.loads(m2.flavor_tags)
+    assert len(parsed2) == 10  # capped at 10

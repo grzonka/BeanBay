@@ -78,6 +78,8 @@
       </label>
     </div>
 
+    {% include "brew/_feedback_panel.html" %}
+
     <button type="submit" class="btn btn-primary btn-full">
       ☕ Brew Again &amp; Rate
     </button>
@@ -114,4 +116,5 @@ function toggleFailed(checkbox) {
   }
 }
 </script>
+<script src="/static/js/tags.js"></script>
 {% endblock %}

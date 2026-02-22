@@ -81,6 +81,8 @@
       <div class="form-hint">Auto-sets taste to 1 — still teaches the optimizer what not to do.</div>
     </div>
 
+    {% include "brew/_feedback_panel.html" %}
+
     <button type="submit" class="btn btn-primary btn-full">
       Submit Rating
     </button>
@@ -108,4 +110,5 @@ function toggleFailed(checkbox) {
   }
 }
 </script>
+<script src="/static/js/tags.js"></script>
 {% endblock %}
