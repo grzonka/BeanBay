@@ -1,30 +1,34 @@
 ---
 phase: 05-insights-trust
-verified: 2026-02-22T12:00:00Z
+verified: 2026-02-22T15:30:00Z
 status: passed
-score: 3/3 must-haves verified
+score: 4/4 must-haves verified
+re_verification:
+  previous_status: passed
+  previous_score: 3/3
+  gaps_closed:
+    - "Recommendation page loads without crashing on 2nd+ recommendation call for any bean"
+    - "Phase badge shows 'Random exploration' for beans with fewer than 5 shots (switch_after=5)"
+    - "Phase badge shows 'Learning' for beans with 5-7 shots in Bayesian mode"
+    - "Phase badge shows 'Bayesian optimization' only after ~8+ shots when model has real data"
+  gaps_remaining: []
+  regressions: []
 gaps: []
 human_verification:
-  - test: "View insights page with active bean and 5+ shots"
-    expected: "Chart renders with cumulative best line and individual shot scatter points in correct colors; failed shots shown in red"
-    why_human: "Chart.js rendering requires browser; can't verify visually from code"
-  - test: "Get a recommendation and check the insight badge"
-    expected: "Phase badge (Random exploration or Bayesian optimization) and plain-language explanation display below the recipe card"
-    why_human: "Visual appearance and layout cannot be verified programmatically"
-  - test: "Pull 10+ shots with improving scores, then check convergence indicator"
-    expected: "Convergence badge transitions through stages: Getting started → Early exploration → Narrowing in → Likely near optimal"
-    why_human: "Requires runtime state transitions with real optimizer; convergence logic is tested but visual rendering needs human check"
-  - test: "View predicted taste range on a Bayesian recommendation (after 2+ shots)"
-    expected: "Expected taste shows predicted mean and range (e.g., ~7.5 (6.5 – 8.5))"
-    why_human: "Requires real BayBE surrogate model with posterior_stats; mocked in tests"
+  - test: "Trigger recommendation for a bean with 0 shots, then pull 5 shots and recommend again"
+    expected: "First recommendation shows 'Random exploration' blue badge. After 5 shots, recommendation shows 'Learning' green badge. After 8+ shots, shows 'Bayesian optimization' gold badge."
+    why_human: "Visual badge color and label transitions need browser confirmation"
+  - test: "Trigger recommend twice for same bean (with measurement recorded between calls)"
+    expected: "Second recommendation loads without crash — no NotImplementedError"
+    why_human: "While tested programmatically (100/100 pass), the specific BayBE cache issue is best confirmed via actual app flow"
 ---
 
-# Phase 5: Insights & Trust Verification Report
+# Phase 5: Insights & Trust — Gap Closure Verification Report
 
-**Phase Goal:** Users can see that the optimizer is learning and understand why it suggests what it suggests — building confidence to keep experimenting.
-**Verified:** 2026-02-22T12:00:00Z
+**Phase Goal:** Fix two UAT gaps — (1) blocker crash on 2nd+ recommendation call due to BayBE UNSPECIFIED bool, and (2) minor UX issue where phase badge switched to "Bayesian optimization" after only 1 shot.
+**Verified:** 2026-02-22T15:30:00Z
 **Status:** passed
-**Re-verification:** No — initial verification
+**Re-verification:** Yes — after gap closure (plan 05-03)
 
 ## Goal Achievement
 
@@ -32,90 +36,83 @@ human_verification:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | User can view a chart showing cumulative best taste score over time for a bean, with individual shot scores visible | ✓ VERIFIED | `insights/_progress_chart.html` renders Chart.js canvas with `cumulative_best` line dataset and `individual_scores` scatter dataset; `_build_chart_data()` in `insights.py` computes running best; chart gated on `shot_count >= 2`; failed shots colored red via `failed_indices` |
-| 2 | Each recommendation displays whether BayBE is exploring or exploiting, in plain language | ✓ VERIFIED | `optimizer.py:get_recommendation_insights()` calls `select_recommender()` to detect `RandomRecommender` vs `BotorchRecommender`; returns `phase_label` and contextual `explanation`; `brew.py:trigger_recommend()` calls this at recommend time and stores in `rec["insights"]`; `_recommendation_insights.html` renders badge + explanation; predicted taste range shown when available |
-| 3 | User can see a convergence indicator showing how far along the optimization is | ✓ VERIFIED | `insights.py:_compute_convergence()` implements 5-state machine: getting_started (< 3 shots), early_exploration (3-7 shots), narrowing_in (recent improvement), near_optimal (no improvement in last 5), refining (default); `_convergence_badge.html` renders label + description; `insights/index.html` includes badge and optimizer phase indicator |
+| 1 | Recommendation page loads without crashing on 2nd+ recommendation call for any bean | ✓ VERIFIED | `optimizer.py` line 193: `campaign.clear_cache()` called before `campaign.recommend(batch_size=1)` at line 194; test `test_recommend_no_crash_on_second_call` passes — two sequential recommend calls with measurement in between succeed without `NotImplementedError` |
+| 2 | Phase badge shows "Random exploration" for beans with fewer than 5 shots | ✓ VERIFIED | `optimizer.py` line 123: `TwoPhaseMetaRecommender(recommender=BotorchRecommender(), switch_after=5)`; lines 293-298: `is_random` → `phase="random"`, `phase_label="Random exploration"`; test `test_insights_random_phase` confirms |
+| 3 | Phase badge shows "Learning" for beans with 5-7 shots in Bayesian mode | ✓ VERIFIED | `optimizer.py` lines 300-306: when not random and `shot_count < 8` → `phase="bayesian_early"`, `phase_label="Learning"`; `insights.py` line 195: `optimizer_phase = "bayesian_early" if shot_count < 8`; `index.html` line 33 renders "Learning" for bayesian_early; tests `test_insights_bayesian_phase` (5 shots) and `test_insights_bayesian_early_phase` (6 shots) confirm |
+| 4 | Phase badge shows "Bayesian optimization" only after ~8+ shots when model has real data | ✓ VERIFIED | `optimizer.py` lines 307-323: `else` block (shot_count >= 8) → `phase="bayesian"`, `phase_label="Bayesian optimization"`; `insights.py` line 195: `"bayesian"` only when `shot_count >= 8`; test `test_insights_with_improvement` (9 shots) confirms `phase="bayesian"` |
 
-**Score:** 3/3 truths verified
+**Score:** 4/4 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `app/services/optimizer.py` | `get_recommendation_insights()` method | ✓ VERIFIED | 357 lines; method at line 257; uses `select_recommender()` for phase detection; computes `posterior_stats` for predicted taste; thread-safe under `_lock` |
-| `app/routers/brew.py` | Insights computed at recommend time | ✓ VERIFIED | 274 lines; lines 98-102 call `get_recommendation_insights()` and store in `rec["insights"]`; passed to template via context |
-| `app/templates/brew/_recommendation_insights.html` | Phase badge + explanation partial | ✓ VERIFIED | 25 lines; renders badge with `insight-badge-{{ insights.phase }}` class, explanation text, and optional predicted taste range |
-| `app/templates/brew/recommend.html` | Includes insights partial | ✓ VERIFIED | 116 lines; line 17 `{% include "brew/_recommendation_insights.html" %}` |
-| `app/routers/insights.py` | Insights page with convergence logic | ✓ VERIFIED | 217 lines; `_compute_convergence()` with 5 states; `_build_chart_data()` for Chart.js; route queries measurements, determines optimizer phase, computes best taste |
-| `app/templates/insights/index.html` | Insights page template | ✓ VERIFIED | 51 lines; shows bean name, shot count, best taste, convergence badge, optimizer phase badge, progress chart, navigation actions |
-| `app/templates/insights/_progress_chart.html` | Chart.js chart | ✓ VERIFIED | 103 lines; Chart.js 4.4.7 CDN; line chart with cumulative best + scatter for individual shots; failed shots in red; tooltips; empty state for < 2 shots |
-| `app/templates/insights/_convergence_badge.html` | Convergence badge | ✓ VERIFIED | 11 lines; renders colored badge with label and description |
-| `app/templates/base.html` | Insights nav link | ✓ VERIFIED | 42 lines; line 19 `<a href="/insights" class="nav-link">Insights</a>` |
-| `app/main.py` | Insights router included | ✓ VERIFIED | 68 lines; line 12 imports insights; line 56 `app.include_router(insights.router)` |
-| `tests/test_insights.py` | Test coverage | ✓ VERIFIED | 184 lines; 6 tests: requires active bean, empty bean, measurements present, chart data, convergence status, nav link |
+| `app/services/optimizer.py` | `clear_cache()` fix, `switch_after=5`, 3-phase logic | ✓ VERIFIED | 360 lines; line 193 `campaign.clear_cache()`, line 123 `switch_after=5`, lines 300-323 three-phase label logic |
+| `app/routers/insights.py` | 3-phase optimizer_phase logic | ✓ VERIFIED | 220 lines; lines 192-195: random/bayesian_early/bayesian based on `isinstance` and `shot_count < 8` |
+| `app/templates/brew/_recommendation_insights.html` | Dynamic badge rendering via `{{ insights.phase }}` | ✓ VERIFIED | 25 lines; line 8 `insight-badge-{{ insights.phase }}` — automatically renders `insight-badge-bayesian_early` class |
+| `app/templates/insights/index.html` | 3-phase label in template | ✓ VERIFIED | 51 lines; line 33: ternary renders "Random exploration" / "Learning" / "Bayesian optimization" |
+| `app/static/css/main.css` | `.insight-badge-bayesian_early` CSS class | ✓ VERIFIED | Lines 912-915: `.insight-badge-bayesian_early { background: #2a3a32; color: #7ae0a8; }` — green-tinted badge |
+| `tests/test_optimizer.py` | 4 tests covering both fixes | ✓ VERIFIED | 349 lines; 21 tests total; `test_recommend_no_crash_on_second_call` (line 311), `test_insights_bayesian_early_phase` (line 333), updated `test_insights_bayesian_phase` (line 266, expects bayesian_early with 5 shots), updated `test_insights_with_improvement` (line 291, 9 shots → bayesian) |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|----|-----|--------|---------|
-| `brew.py:trigger_recommend` | `optimizer.get_recommendation_insights` | Direct call (line 99) | ✓ WIRED | Called after `recommend()`, stored in `rec["insights"]` |
-| `brew.py:show_recommendation` | `_recommendation_insights.html` | Template include (line 17 of recommend.html) | ✓ WIRED | `insights` dict passed in template context |
-| `insights.py:insights_page` | `_convergence_badge.html` | Template include (line 29 of index.html) | ✓ WIRED | `convergence` dict from `_compute_convergence()` passed in context |
-| `insights.py:insights_page` | `_progress_chart.html` | Template include (line 41 of index.html) | ✓ WIRED | `chart_data` from `_build_chart_data()` passed in context, serialized via `tojson` |
-| `main.py` | `insights.router` | `include_router` (line 56) | ✓ WIRED | Router mounted at `/insights` prefix |
-| `base.html` nav | `/insights` route | `<a href="/insights">` (line 19) | ✓ WIRED | Nav link present globally |
-| `optimizer.py:get_recommendation_insights` | BayBE `select_recommender` | Method call on `TwoPhaseMetaRecommender` (line 280) | ✓ WIRED | Correctly detects `RandomRecommender` vs Bayesian phase |
-| `optimizer.py:get_recommendation_insights` | BayBE `posterior_stats` | Method call on campaign (line 330) | ✓ WIRED | Called when `not is_random and shot_count >= 2`; wrapped in try/except for robustness |
+| `optimizer.py:_recommend` | `campaign.recommend()` | `campaign.clear_cache()` at line 193 before `campaign.recommend()` at line 194 | ✓ WIRED | clear_cache resets `_cached_recommendation` to None, preventing UNSPECIFIED.__bool__() crash |
+| `optimizer.py:_create_fresh_campaign` | `TwoPhaseMetaRecommender` | `switch_after=5` at line 123 | ✓ WIRED | Random phase lasts 5 shots before Bayesian activates |
+| `optimizer.py:get_recommendation_insights` | `_recommendation_insights.html` | `phase="bayesian_early"` at line 301 → CSS class `insight-badge-bayesian_early` at template line 8 | ✓ WIRED | Dynamic class binding renders correct badge color |
+| `insights.py:insights_page` | `index.html` line 33 | `optimizer_phase="bayesian_early"` at line 195 → ternary renders "Learning" | ✓ WIRED | Insights page and recommendation page show consistent phase labels |
 
 ### Requirements Coverage
 
 | Requirement | Status | Blocking Issue |
 |-------------|--------|----------------|
-| VIZ-01: User can see optimization progress chart (cumulative best taste over time) | ✓ SATISFIED | — |
-| VIZ-02: User can see why a recipe was suggested (exploring vs exploiting) | ✓ SATISFIED | — |
-| VIZ-05: User can see exploration/exploitation balance indicator (how converged the optimizer is) | ✓ SATISFIED | — |
+| VIZ-02: User can see why a recipe was suggested (exploring vs exploiting) | ✓ SATISFIED | Phase badge now accurately reflects optimizer knowledge level with 3-phase scheme |
+| UAT Gap #1 (Blocker): Recommend crash on 2nd+ call | ✓ RESOLVED | `clear_cache()` fix eliminates NotImplementedError |
+| UAT Gap #2 (Minor): Misleading "Bayesian optimization" badge after 1 shot | ✓ RESOLVED | `switch_after=5` + bayesian_early sub-phase gives honest labels |
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| — | — | — | — | No anti-patterns found in any phase 5 files |
+| — | — | — | — | No anti-patterns found in any modified files |
 
 ### Human Verification Required
 
-### 1. Chart Rendering
-**Test:** Open `/insights` with an active bean that has 5+ shots (mix of failed and successful)
-**Expected:** Chart.js renders a line chart with a cumulative best line (brown, filled area) and individual shot scatter points. Failed shots should appear in red. Tooltips show taste score on hover.
-**Why human:** Chart.js rendering is client-side JavaScript; structural verification confirms data flow but visual rendering requires a browser.
+### 1. Phase Badge Visual Transitions
+**Test:** Start with a fresh bean (0 shots). Get a recommendation — note badge. Pull 5 shots with taste scores. Get another recommendation — note badge. Pull 3 more shots (total 8+). Get another recommendation — note badge.
+**Expected:** Badge transitions: "Random exploration" (blue) → "Learning" (green) → "Bayesian optimization" (gold). Each badge has distinct, readable colors on the dark theme.
+**Why human:** Badge color and visual appearance require browser rendering confirmation.
 
-### 2. Recommendation Insights Display
-**Test:** Trigger a recommendation via `/brew` for a bean with 0 shots, then again after 3+ shots
-**Expected:** First recommendation shows "Random exploration" badge with "Exploring randomly" explanation. After shots, shows "Bayesian optimization" badge with contextual explanation. Predicted taste range appears after 2+ measurements.
-**Why human:** Visual layout, badge styling, and predicted taste from real BayBE model require runtime verification.
+### 2. No Crash on Repeated Recommendations
+**Test:** Get a recommendation for any bean. Record a measurement. Get another recommendation.
+**Expected:** Second recommendation loads successfully with no error page or crash.
+**Why human:** While 100/100 tests pass (including explicit crash test), confirming the fix works in the actual app flow with real BayBE campaign state provides additional confidence.
 
-### 3. Convergence State Transitions
-**Test:** Pull 10+ shots with gradually improving scores, then check `/insights`
-**Expected:** Convergence badge transitions: "Getting started" (< 3 shots) → "Early exploration" (3-7 shots) → "Narrowing in" (when recent shots beat previous best) → "Likely near optimal" (no improvement in last 5 non-failed shots)
-**Why human:** Full state machine exercise requires real workflow with optimizer; unit tests cover individual states but end-to-end UX needs manual check.
+### Regression Quick-Check (Previous Truths)
 
-### 4. Mobile Layout
-**Test:** Open `/insights` on a mobile device or narrow viewport
-**Expected:** Chart resizes responsively; convergence badge and content stack vertically; nav link accessible
-**Why human:** CSS responsive behavior cannot be verified from code alone.
+All 3 original phase 5 truths spot-checked for regression:
+
+| # | Original Truth | Status | Quick Check |
+|---|----------------|--------|-------------|
+| 1 | Progress chart with cumulative best | ✓ NO REGRESSION | `_build_chart_data()` unchanged; `_progress_chart.html` unchanged; chart gating unchanged |
+| 2 | Explore/exploit badge on recommendations | ✓ NO REGRESSION | `get_recommendation_insights()` enhanced (not broken); template unchanged; brew.py integration unchanged |
+| 3 | Convergence indicator on insights page | ✓ NO REGRESSION | `_compute_convergence()` unchanged; `_convergence_badge.html` unchanged; insights route enhanced but convergence logic untouched |
 
 ### Gaps Summary
 
-No gaps found. All 3 observable truths are fully verified:
+No gaps found. Both UAT gaps are fully resolved:
 
-1. **Progress chart**: `_build_chart_data()` correctly computes cumulative best and individual scores from DB measurements. Chart.js renders with proper datasets, colors, and empty state handling. Gated on ≥ 2 shots.
+1. **Crash fix (blocker):** `campaign.clear_cache()` is called at line 193 immediately before `campaign.recommend(batch_size=1)` at line 194 in `optimizer.py`. This resets `_cached_recommendation` to `None`, causing BayBE's cache guard walrus operator to short-circuit before it reaches `UNSPECIFIED.__bool__()`. Test `test_recommend_no_crash_on_second_call` exercises this exact scenario and passes.
 
-2. **Explore/exploit insights**: `get_recommendation_insights()` uses BayBE's `select_recommender()` to detect random vs Bayesian phase. Contextual explanations vary based on shot count and improvement trends. Predicted taste range computed via `posterior_stats()` when surrogate model is available. Insights computed at recommend time in `brew.py` and stored with the recommendation — no extra latency.
+2. **Phase badge trust (minor):** Three-phase badge system implemented:
+   - **Random exploration** (0-4 shots): `switch_after=5` keeps optimizer in random phase for first 5 shots
+   - **Learning** (5-7 shots): `bayesian_early` sub-phase with green badge, honest "learning your preferences" explanation
+   - **Bayesian optimization** (8+ shots): Full bayesian label only when model has substantial data
 
-3. **Convergence indicator**: 5-state convergence machine in `_compute_convergence()` with plain-language labels and descriptions. States: getting_started, early_exploration, narrowing_in, near_optimal, refining. Rendered as a colored badge on the insights page alongside the current optimizer phase.
-
-All 98 tests pass (including 6 insights-specific tests and 3 optimizer insights tests). No stub patterns, no TODOs, no placeholder content. All key links verified as wired.
+All 100 tests pass (including 2 updated + 2 new optimizer tests). No stub patterns, no TODOs, no placeholder content. No regressions in original phase 5 functionality.
 
 ---
 
-_Verified: 2026-02-22T12:00:00Z_
+_Verified: 2026-02-22T15:30:00Z_
 _Verifier: OpenCode (gsd-verifier)_
