@@ -50,7 +50,7 @@ Plans:
 
 **Milestone Goal:** Make the app feel right on every screen, eliminate lazy-default UX traps, and let users record brews without waiting for BayBE recommendations.
 
-#### Phase 10: Responsive Navigation & Layout
+#### Phase 10: Responsive Navigation & Layout ✅ COMPLETE
 
 **Goal:** App layout adapts to any screen — hamburger/drawer on mobile, sidebar on desktop, active bean indicator never overflows
 **Depends on:** Nothing (CSS/HTML changes, independent of backend)
@@ -63,8 +63,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Mobile hamburger + drawer navigation
-- [ ] 10-02-PLAN.md — Desktop sidebar layout + responsive container
+- [x] 10-01-PLAN.md — Mobile hamburger + drawer navigation
+- [x] 10-02-PLAN.md — Desktop sidebar layout + responsive container
 
 #### Phase 11: Brew UX Improvements
 
@@ -106,6 +106,6 @@ Plans:
 | 7 | v0.1.0 | 2/2 | Complete | 2026-02-22 |
 | 8 | v0.1.0 | 2/2 | Complete | 2026-02-22 |
 | 9 | v0.1.0 | 1/1 | Complete | 2026-02-22 |
-| 10. Responsive Nav & Layout | v0.1.1 | 0/TBD | Not started | - |
+| 10. Responsive Nav & Layout | v0.1.1 | 2/2 | ✅ Complete | 2026-02-22 |
 | 11. Brew UX Improvements | v0.1.1 | 0/TBD | Not started | - |
 | 12. Manual Brew Input | v0.1.1 | 0/TBD | Not started | - |
