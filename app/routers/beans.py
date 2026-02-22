@@ -10,6 +10,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.bag import Bag
 from app.models.bean import Bean
 from app.models.measurement import Measurement
 from app.services.optimizer import DEFAULT_BOUNDS
@@ -139,9 +140,12 @@ async def update_bean(
     name: str = Form(...),
     roaster: str = Form(""),
     origin: str = Form(""),
+    roast_date: str = Form(""),
+    process: str = Form(""),
+    variety: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    """Update bean info (name, roaster, origin)."""
+    """Update bean info (name, roaster, origin, roast_date, process, variety)."""
     bean = db.query(Bean).filter(Bean.id == bean_id).first()
     if not bean:
         return RedirectResponse(url="/beans", status_code=303)
@@ -149,6 +153,11 @@ async def update_bean(
     bean.name = name.strip()
     bean.roaster = roaster.strip() or None
     bean.origin = origin.strip() or None
+    bean.roast_date = (
+        datetime.strptime(roast_date, "%Y-%m-%d").date() if roast_date.strip() else None
+    )
+    bean.process = process.strip() or None
+    bean.variety = variety.strip() or None
     db.commit()
 
     return RedirectResponse(url=f"/beans/{bean_id}", status_code=303)
@@ -284,6 +293,52 @@ async def delete_bean(
         return HTMLResponse("")
 
     return RedirectResponse(url="/beans", status_code=303)
+
+
+@router.post("/{bean_id}/bags", response_class=HTMLResponse)
+async def add_bag(
+    request: Request,
+    bean_id: str,
+    purchase_date: str = Form(""),
+    cost: str = Form(""),
+    weight_grams: str = Form(""),
+    notes: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Add a bag to a bean."""
+    bean = db.query(Bean).filter(Bean.id == bean_id).first()
+    if not bean:
+        return RedirectResponse(url="/beans", status_code=303)
+
+    bag = Bag(
+        bean_id=bean_id,
+        purchase_date=datetime.strptime(purchase_date, "%Y-%m-%d").date()
+        if purchase_date.strip()
+        else None,
+        cost=float(cost) if cost.strip() else None,
+        weight_grams=float(weight_grams) if weight_grams.strip() else None,
+        notes=notes.strip() or None,
+    )
+    db.add(bag)
+    db.commit()
+
+    return RedirectResponse(url=f"/beans/{bean_id}", status_code=303)
+
+
+@router.post("/{bean_id}/bags/{bag_id}/delete")
+async def delete_bag(
+    request: Request,
+    bean_id: str,
+    bag_id: str,
+    db: Session = Depends(get_db),
+):
+    """Delete a bag."""
+    bag = db.query(Bag).filter(Bag.id == bag_id, Bag.bean_id == bean_id).first()
+    if bag:
+        db.delete(bag)
+        db.commit()
+
+    return RedirectResponse(url=f"/beans/{bean_id}", status_code=303)
 
 
 @router.post("/{bean_id}/delete")
