@@ -1,18 +1,21 @@
-# BrewFlow
+# BeanBay
 
 ## What This Is
 
-A phone-first web application for optimizing espresso recipes using Bayesian optimization (BayBE). Runs on a homeserver (Unraid/Docker), letting the user dial in any coffee bean by iterating: get a recommendation, brew, taste, rate, repeat. BayBE learns from each shot to suggest better recipes over time.
+A phone-first web application for optimizing coffee recipes using Bayesian optimization (BayBE). Runs on a homeserver (Unraid/Docker) or any machine with Docker, letting the user dial in any coffee bean by iterating: get a recommendation, brew, taste, rate, repeat. BayBE learns from each shot to suggest better recipes over time.
 
 Built with FastAPI + Jinja2/htmx + SQLite + Chart.js. Deployed as a single Docker container.
 
+**Website:** beanbay.coffee
+
 ## Core Value
 
-Every espresso shot teaches the system something — the app must make it effortless to capture that feedback from a phone at the espresso machine and return increasingly better recommendations.
+Every coffee brew teaches the system something — the app must make it effortless to capture that feedback from a phone at the espresso machine and return increasingly better recommendations.
 
 ## Current State
 
-**Shipped:** v1 MVP (2026-02-22)
+**Shipped:** v1 MVP (2026-02-22) — as "BrewFlow" (being rebranded to BeanBay in v1.1)
+**Active milestone:** v1.1 Release & Deploy
 **Codebase:** ~7,632 LOC (Python, HTML, CSS/JS), 108 tests passing
 **Stack:** FastAPI, Jinja2/htmx, SQLite, Chart.js, BayBE, Docker
 
@@ -29,22 +32,23 @@ Every espresso shot teaches the system something — the app must make it effort
 - ✓ Cross-bean comparison (best recipes side by side) — v1
 - ✓ Brew statistics dashboard (total shots, averages, personal records) — v1
 - ✓ Mobile-first responsive UI that works well with messy hands — v1
-- ✓ Docker deployment for Unraid homeserver — v1
+- ✓ Docker deployment for homeserver — v1
 - ✓ Accessible from anywhere on the local network — v1
 
 ### Active
 
-(None yet — define with `/gsd-new-milestone`)
+See `.planning/REQUIREMENTS.md` for v1.1 requirements (rebrand, cleanup, deploy).
 
-### Out of Scope
+### Out of Scope (current milestone)
 
-- Multi-user accounts — long-term vision only, not v1
-- Custom parameter ranges per bean — current 6 params (grind, temp, preinfusion%, dose, yield, saturation) are fixed
-- Data migration from existing Marimo app — starting fresh
-- Mobile native app — webapp only
-- Integration with smart scales or Bluetooth devices
-- Full offline/PWA — can't run BayBE in browser, server IS the optimization engine
-- SCA flavor wheel — too complex for quick phone input, 6-dimension profile sufficient
+- Multi-user accounts — v3 vision
+- Multi-method brewing (filter, immersion) — v2
+- Grinder management with dial types — v2
+- Water tracking — v2
+- Beanconqueror import — v2
+- Enhanced bean metadata (roast date, origin, process) — v2
+- Cross-brew intelligence / recommendation from similar brews — v2
+- Community/shared database — v3
 
 ## Context
 
@@ -52,16 +56,16 @@ Every espresso shot teaches the system something — the app must make it effort
 - **Hardware setup:** Sage Dual Boiler (Slayer mod) + DF83v grinder. Parameters tuned to this specific machine's ranges.
 - **BayBE:** Hybrid search space (5 continuous + 1 categorical), ~7.5KB campaign files. Three-phase optimization: random (0-4 shots) → Learning (5-7) → Bayesian optimization (8+).
 - **Usage pattern:** Primarily phone at the espresso machine. Quick interactions most days, occasional deep tasting sessions on laptop.
-- **Deployment:** Unraid server via Docker. Single container, SQLite + BayBE JSON campaign files in persistent volume.
+- **Deployment:** Unraid server via Docker. Single container, SQLite + BayBE JSON campaign files in persistent volume. Also available to any Docker user.
 - **Known tech debt:** Duplicated helper, dead directory, in-memory session state, startup migration outside Alembic. See milestones/v1-MILESTONE-AUDIT.md.
 
 ## Constraints
 
 - **Backend language**: Python — BayBE is a Python library, no way around it
 - **Optimization engine**: BayBE — already proven, campaign state is JSON-serializable
-- **Parameters**: Fixed set of 6 parameters with current ranges (matched to Sage Dual Boiler + DF83v)
-- **Single user**: v1 is personal use only, no auth needed
-- **Self-hosted**: Must run on local Unraid server via Docker
+- **Parameters**: Fixed set of 6 parameters with current ranges (matched to Sage Dual Boiler + DF83v) — v2 will make this configurable
+- **Single user**: v1/v1.1 is personal use only, no auth needed
+- **Self-hosted**: Must run on local server via Docker (Unraid or any Docker host)
 
 ## Key Decisions
 
@@ -78,6 +82,16 @@ Every espresso shot teaches the system something — the app must make it effort
 | SQLite as database | Single-user, embedded, no separate DB server | ✓ Good — zero ops overhead |
 | Chart.js for visualization | CDN-loaded, no build step, rich chart types | ✓ Good — progress charts + heatmaps working |
 | Measurements as source of truth | Campaigns rebuildable from measurement data | ✓ Good — disaster recovery works |
+| Rebrand to BeanBay | Better name — "bean" first, "bay" as gathering place + Bayesian hint | v1.1 — in progress |
+
+## Milestone Roadmap
+
+| Milestone | Focus | Status |
+|-----------|-------|--------|
+| v1 MVP | Core espresso optimization loop | ✓ Shipped |
+| v1.1 Release & Deploy | Rebrand, cleanup, Docker/Unraid deployment | Active |
+| v2 Multi-Method Platform | Filter/immersion brewing, grinders, waters, Beanconqueror import | Planned |
+| v3 Community Platform | Multi-user, shared database, hosted solution | Vision |
 
 ---
-*Last updated: 2026-02-22 after v1 milestone*
+*Last updated: 2026-02-22 after v1.1 milestone planning*

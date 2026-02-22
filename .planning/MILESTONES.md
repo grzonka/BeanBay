@@ -1,4 +1,4 @@
-# Project Milestones: BrewFlow
+# Project Milestones: BeanBay
 
 ## v1 MVP (Shipped: 2026-02-22)
 
@@ -22,6 +22,21 @@
 
 **Git range:** `docs: initialize project` → `docs(v1): create milestone audit report`
 
-**What's next:** Deploy to Unraid, validate with real espresso sessions, then plan v2 based on usage learnings.
+---
+
+## v1.1 Release & Deploy (In Progress)
+
+**Goal:** Rebrand from BrewFlow to BeanBay, clean up tech debt, create documentation, and ship as a publicly deployable product with Docker images and Unraid support.
+
+**Phases:** 7-9 (5 plans total)
+
+**Key deliverables:**
+- Rebrand: BrewFlow → BeanBay (beanbay.coffee)
+- Tech debt cleanup (5 items from v1 audit)
+- README, LICENSE, GitHub Actions CI/CD
+- Docker image on ghcr.io/grzonka/beanbay
+- Unraid Community Apps XML template
+
+**Status:** Planning complete, ready for execution.
 
 ---
