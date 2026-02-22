@@ -51,7 +51,7 @@
 **Plans:** 3 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — New SQLAlchemy models + extended Bean/Measurement + model tests
+- [x] 13-01-PLAN.md — New SQLAlchemy models + extended Bean/Measurement + model tests
 - [ ] 13-02-PLAN.md — Alembic migration with data migration for existing measurements
 - [ ] 13-03-PLAN.md — Bean metadata UI + bag management on detail page
 
@@ -167,7 +167,7 @@ Phase 16 (Transfer Learning)
 | 1-6 | v1 MVP | 16/16 | Complete | 2026-02-22 |
 | 7-9 | v0.1.0 | 5/5 | Complete | 2026-02-22 |
 | 10-12 | v0.1.1 | 8/8 | Complete | 2026-02-22 |
-| 13 | v0.2.0 | 0/3 | Planned | — |
+| 13 | v0.2.0 | 1/3 | In progress | — |
 | 14 | v0.2.0 | 0/TBD | Pending | — |
 | 15 | v0.2.0 | 0/TBD | Pending | — |
 | 16 | v0.2.0 | 0/TBD | Pending | — |
