@@ -1,7 +1,7 @@
 # Project State: BeanBay
 
 **Last updated:** 2026-02-22
-**Current phase:** Phase 7 complete and verified ✓. Ready for Phase 8 (Documentation & Release).
+**Current phase:** Phase 8 — Documentation & Release (in progress).
 
 ## Project Reference
 
@@ -26,19 +26,19 @@ See: .planning/MILESTONES.md
 | Phase | Name | Status |
 |-------|------|--------|
 | 7 | Rebrand & Cleanup | ✅ Complete & Verified |
-| 8 | Documentation & Release | Not started |
+| 8 | Documentation & Release | 🔄 In Progress (1/2 plans done) |
 | 9 | Deployment Templates | Not started |
 
-**Overall progress:** Phase 7 fully complete. 2/5 v0.1.0 plans done.
+**Overall progress:** Phase 8 in progress. 3/5 v0.1.0 plans done.
 
 ## Current Position
 
-Phase: 7 of 9 (Rebrand & Cleanup) — COMPLETE
-Plan: 2 of 2 in Phase 7
-Status: Phase complete and verified ✓ — ready for Phase 8
-Last activity: 2026-02-22 - Phase 7 verified, all must-haves pass
+Phase: 8 of 9 (Documentation & Release) — In Progress
+Plan: 1 of 2 in Phase 8
+Status: In progress
+Last activity: 2026-02-22 - Completed 08-01-PLAN.md (README.md created)
 
-Progress: ██░░░ 40% (2/5 v0.1.0 plans)
+Progress: ███░░ 60% (3/5 v0.1.0 plans)
 
 ## Blockers
 
@@ -71,15 +71,14 @@ See: .planning/phases/07-rebrand-cleanup/07-02-SUMMARY.md
 
 ### Last Session
 - **Date:** 2026-02-22
-- **What happened:** Executed Phase 7 (both plans in parallel). Plan 07-01 rebranded entire codebase from BrewFlow to BeanBay. Plan 07-02 fixed all 5 tech debt items. Verifier found legacy files (my_espresso.py, __marimo__/) needed deletion — resolved by orchestrator (files were gitignored, deleted locally). All 108 tests pass, 7/7 must-haves verified.
-- **Where we left off:** Phase 7 complete and verified. Ready for Phase 8 (Documentation & Release).
+- **What happened:** Executed Phase 8 Plan 01. Created README.md with WIP indication, Docker quick start, dev setup, and Apache 2.0 license reference. 57 lines, concise and honest.
+- **Where we left off:** Phase 8 in progress. 1/2 plans done. Ready for 08-02 (GitHub Actions CI/CD + v0.1.0 release).
 
 ### Next Steps
-1. Plan Phase 8 — `/gsd-plan-phase 8`
-2. Create GitHub repo `grzonka/beanbay` (needed for Phase 8 CI/release)
-3. Execute phases 8-9
-4. Deploy to Unraid
+1. Execute 08-02 — GitHub Actions CI/CD workflows (test + Docker publish) + v0.1.0 release
+2. Execute 09-01 — Docker files update + Unraid CA XML template
+3. Deploy to Unraid
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-22*
+*Last updated: 2026-02-22 after 08-01 (README)*
