@@ -4,7 +4,7 @@ import json
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -289,3 +289,55 @@ async def shot_edit_save(
     )
 
     return HTMLResponse(content=modal_html + oob_row_html)
+
+
+# ---------------------------------------------------------------------------
+# Batch delete
+# ---------------------------------------------------------------------------
+
+
+@router.post("/delete-batch")
+async def delete_batch(request: Request, db: Session = Depends(get_db)):
+    """Delete selected measurements and rebuild BayBE campaigns for affected beans."""
+    import pandas as pd
+
+    from app.services.optimizer import BAYBE_PARAM_COLUMNS
+
+    form = await request.form()
+    shot_ids = form.getlist("shot_ids")
+    if not shot_ids:
+        return RedirectResponse(url="/history", status_code=303)
+
+    # Convert to ints
+    shot_ids_int = [int(sid) for sid in shot_ids]
+
+    # Find affected beans before deleting
+    measurements = db.query(Measurement).filter(Measurement.id.in_(shot_ids_int)).all()
+    affected_bean_ids = {m.bean_id for m in measurements}
+
+    # Delete measurements
+    db.query(Measurement).filter(Measurement.id.in_(shot_ids_int)).delete(synchronize_session=False)
+    db.commit()
+
+    # Rebuild campaigns for affected beans
+    optimizer = request.app.state.optimizer
+    for bean_id in affected_bean_ids:
+        bean = db.query(Bean).filter(Bean.id == bean_id).first()
+        remaining = db.query(Measurement).filter(Measurement.bean_id == bean_id).all()
+        overrides = bean.parameter_overrides if bean else None
+        if remaining:
+            df = pd.DataFrame(
+                [
+                    {
+                        **{col: getattr(m, col) for col in BAYBE_PARAM_COLUMNS},
+                        "taste": m.taste,
+                    }
+                    for m in remaining
+                ]
+            )
+            optimizer.rebuild_campaign(bean_id, df, overrides=overrides)
+        else:
+            # No remaining measurements — rebuild empty campaign
+            optimizer.rebuild_campaign(bean_id, pd.DataFrame(), overrides=overrides)
+
+    return RedirectResponse(url="/history", status_code=303)

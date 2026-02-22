@@ -3,6 +3,7 @@
 import json
 import uuid
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -360,3 +361,98 @@ def test_shot_detail_shows_manual_badge(client, sample_bean, db_session):
     assert response.status_code == 200
     assert "badge-manual" in response.text
     assert "Manual" in response.text
+
+
+# ---------------------------------------------------------------------------
+# Batch delete tests
+# ---------------------------------------------------------------------------
+
+
+def test_delete_batch_removes_measurements(client, sample_bean, db_session):
+    """POST /history/delete-batch with shot_ids removes selected measurements."""
+    from app.main import app
+
+    shot1 = _seed_shot(db_session, sample_bean.id, taste=8.0)
+    shot2 = _seed_shot(db_session, sample_bean.id, taste=7.0)
+    shot3 = _seed_shot(db_session, sample_bean.id, taste=6.0)
+
+    # Capture IDs before delete (objects may be detached after)
+    id1, id2, id3 = shot1.id, shot2.id, shot3.id
+
+    mock_optimizer = MagicMock()
+    mock_optimizer.rebuild_campaign = MagicMock()
+    app.state.optimizer = mock_optimizer
+
+    response = client.post(
+        "/history/delete-batch",
+        data={"shot_ids": [str(id1), str(id2)]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db_session.expire_all()
+    remaining = db_session.query(Measurement).filter(Measurement.bean_id == sample_bean.id).all()
+    remaining_ids = {m.id for m in remaining}
+    assert id3 in remaining_ids
+    assert id1 not in remaining_ids
+    assert id2 not in remaining_ids
+
+
+def test_delete_batch_rebuilds_campaign(client, sample_bean, db_session):
+    """POST /history/delete-batch calls rebuild_campaign for affected bean."""
+    from app.main import app
+
+    shot1 = _seed_shot(db_session, sample_bean.id, taste=8.0)
+    _seed_shot(db_session, sample_bean.id, taste=7.0)  # one remains
+
+    mock_optimizer = MagicMock()
+    mock_optimizer.rebuild_campaign = MagicMock()
+    app.state.optimizer = mock_optimizer
+
+    response = client.post(
+        "/history/delete-batch",
+        data={"shot_ids": [str(shot1.id)]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    mock_optimizer.rebuild_campaign.assert_called_once()
+    call_args = mock_optimizer.rebuild_campaign.call_args
+    assert str(sample_bean.id) == str(call_args[0][0])
+
+
+def test_delete_batch_empty_ids_redirects(client, sample_bean, db_session):
+    """POST /history/delete-batch with no shot_ids redirects without DB changes."""
+    from app.main import app
+
+    shot = _seed_shot(db_session, sample_bean.id, taste=8.0)
+
+    response = client.post(
+        "/history/delete-batch",
+        data={},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    db_session.expire_all()
+    still_exists = db_session.query(Measurement).filter(Measurement.id == shot.id).first()
+    assert still_exists is not None
+
+
+def test_delete_batch_multiple_beans(client, sample_bean, second_bean, db_session):
+    """POST /history/delete-batch calls rebuild_campaign once per affected bean."""
+    from app.main import app
+
+    shot_a = _seed_shot(db_session, sample_bean.id, taste=8.0)
+    shot_b = _seed_shot(db_session, second_bean.id, taste=7.0)
+
+    mock_optimizer = MagicMock()
+    mock_optimizer.rebuild_campaign = MagicMock()
+    app.state.optimizer = mock_optimizer
+
+    response = client.post(
+        "/history/delete-batch",
+        data={"shot_ids": [str(shot_a.id), str(shot_b.id)]},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert mock_optimizer.rebuild_campaign.call_count == 2

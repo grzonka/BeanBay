@@ -1,5 +1,7 @@
 <div class="shot-row card mb-sm" id="shot-{{ shot.id }}"
   hx-get="/history/{{ shot.id }}" hx-target="#shot-modal-container" hx-swap="innerHTML">
+  <input type="checkbox" class="delete-check" name="shot_ids" value="{{ shot.id }}" form="delete-form"
+    style="display: none;" onchange="updateDeleteCount()">
   <div class="shot-row-header">
     <span class="shot-date">{{ shot.created_at.strftime('%b %d, %H:%M') }}</span>
     <span class="shot-meta">

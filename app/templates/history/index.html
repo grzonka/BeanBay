@@ -5,7 +5,21 @@
 {% block content %}
 <div class="page-header">
   <h1 class="page-title">Brew History</h1>
+  <button type="button" id="delete-mode-btn" class="btn btn-secondary btn-sm"
+    onclick="toggleDeleteMode()">🗑️ Delete</button>
 </div>
+
+<!-- Delete form (hidden until delete mode active) -->
+<form id="delete-form" method="post" action="/history/delete-batch" style="display: none;">
+  <div id="delete-bar" class="delete-action-bar">
+    <span id="delete-count">0 selected</span>
+    <button type="submit" class="btn btn-danger btn-sm"
+      onclick="return confirm('Delete ' + document.querySelectorAll('.delete-check:checked').length + ' brew(s)?')">
+      Delete Selected
+    </button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleDeleteMode()">Cancel</button>
+  </div>
+</form>
 
 <!-- Filter panel -->
 <div class="filter-panel-wrapper card mb-md">
@@ -36,4 +50,25 @@
 
 {% block scripts %}
 <script src="/static/js/tags.js"></script>
+<script>
+  function toggleDeleteMode() {
+    var checks = document.querySelectorAll('.delete-check');
+    var deleteForm = document.getElementById('delete-form');
+    var deleteBtn = document.getElementById('delete-mode-btn');
+    var isActive = checks.length > 0 && checks[0].style.display !== 'none';
+
+    checks.forEach(function(cb) {
+      cb.style.display = isActive ? 'none' : 'inline-block';
+      cb.checked = false;
+    });
+    deleteForm.style.display = isActive ? 'none' : 'block';
+    deleteBtn.textContent = isActive ? '🗑️ Delete' : 'Cancel Delete';
+    updateDeleteCount();
+  }
+  function updateDeleteCount() {
+    var count = document.querySelectorAll('.delete-check:checked').length;
+    var el = document.getElementById('delete-count');
+    if (el) el.textContent = count + ' selected';
+  }
+</script>
 {% endblock %}
