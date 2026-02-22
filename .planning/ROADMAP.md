@@ -60,11 +60,11 @@ Plans:
   2. On desktop (≥768px), navigation is a fixed sidebar and main content uses full available width — not a 480px centered column
   3. Active bean indicator displays cleanly in both mobile drawer and desktop sidebar without text wrapping or overflow, even with long bean names
   4. All existing pages remain functional and visually correct after layout changes (no broken layouts)
-**Plans:** TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
+- [ ] 10-01-PLAN.md — Mobile hamburger + drawer navigation
+- [ ] 10-02-PLAN.md — Desktop sidebar layout + responsive container
 
 #### Phase 11: Brew UX Improvements
 
