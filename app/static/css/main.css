@@ -876,3 +876,70 @@ body {
   border-top: 1px solid var(--border);
   padding-top: var(--spacing-sm);
 }
+
+/* Recommendation insights */
+.recommendation-insights {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.insight-phase {
+  margin-bottom: var(--spacing-sm);
+}
+
+.insight-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.insight-badge-random {
+  background: #2a3a4a;
+  color: #7ab8e0;
+}
+
+.insight-badge-bayesian {
+  background: #3a3420;
+  color: #e0b860;
+}
+
+.insight-explanation {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: var(--spacing-sm);
+}
+
+.insight-prediction {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--border);
+}
+
+.insight-prediction-label {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.insight-prediction-value {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.insight-prediction-range {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-secondary);
+}

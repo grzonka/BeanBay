@@ -95,6 +95,12 @@ async def trigger_recommend(request: Request, db: Session = Depends(get_db)):
     optimizer = request.app.state.optimizer
     rec = await optimizer.recommend(bean.id, overrides=bean.parameter_overrides)
 
+    # Compute recommendation insights (explore vs exploit explanation + predicted taste)
+    insights = optimizer.get_recommendation_insights(
+        bean.id, rec, overrides=bean.parameter_overrides
+    )
+    rec["insights"] = insights
+
     # Store recommendation in session (redirect to display page)
     rec_id = rec["recommendation_id"]
 
@@ -128,6 +134,7 @@ async def show_recommendation(
         return RedirectResponse(url="/brew", status_code=303)
 
     ratio = _brew_ratio(rec.get("dose_in", 0), rec.get("target_yield", 0))
+    insights = rec.get("insights", {})
 
     return templates.TemplateResponse(
         request,
@@ -137,6 +144,7 @@ async def show_recommendation(
             "rec": rec,
             "recommendation_id": recommendation_id,
             "ratio": ratio,
+            "insights": insights,
         },
     )
 

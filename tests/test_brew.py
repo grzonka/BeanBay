@@ -147,6 +147,15 @@ def test_trigger_recommend_no_active_bean(client):
 def test_trigger_recommend_generates_and_redirects(active_client):
     """POST /brew/recommend generates recommendation, redirects to display page."""
     fake_rec = _make_rec()
+    fake_insights = {
+        "phase": "random",
+        "phase_label": "Random exploration",
+        "explanation": "Exploring randomly — building initial understanding of the parameter space.",
+        "predicted_mean": None,
+        "predicted_std": None,
+        "predicted_range": None,
+        "shot_count": 0,
+    }
 
     with patch.object(
         app.state.__class__,
@@ -156,8 +165,11 @@ def test_trigger_recommend_generates_and_redirects(active_client):
         pass  # just checking the mock approach compiles
 
     # Patch the optimizer on app.state directly
-    mock_optimizer = AsyncMock()
+    from unittest.mock import MagicMock
+
+    mock_optimizer = MagicMock()
     mock_optimizer.recommend = AsyncMock(return_value=fake_rec)
+    mock_optimizer.get_recommendation_insights = MagicMock(return_value=fake_insights)
     app.state.optimizer = mock_optimizer
 
     response = active_client.post("/brew/recommend")
@@ -531,3 +543,61 @@ def test_record_with_flavor_tags(active_client, sample_bean, db):
     assert m2 is not None
     parsed2 = _json.loads(m2.flavor_tags)
     assert len(parsed2) == 10  # capped at 10
+
+
+# ---------------------------------------------------------------------------
+# Recommendation insights — explore/exploit explanation
+# ---------------------------------------------------------------------------
+
+
+def test_recommendation_shows_insights(active_client, sample_bean):
+    """GET /brew/recommend/{id} shows phase_label from insights in the response."""
+    from unittest.mock import MagicMock
+
+    rec_id = str(uuid.uuid4())
+    rec = _make_rec(rec_id)
+    rec["insights"] = {
+        "phase": "random",
+        "phase_label": "Random exploration",
+        "explanation": "Exploring randomly — building initial understanding of the parameter space.",
+        "predicted_mean": None,
+        "predicted_std": None,
+        "predicted_range": None,
+        "shot_count": 0,
+    }
+
+    if not hasattr(app.state, "pending_recommendations"):
+        app.state.pending_recommendations = {}
+    app.state.pending_recommendations[rec_id] = rec
+
+    response = active_client.get(f"/brew/recommend/{rec_id}")
+    assert response.status_code == 200
+    assert "Random exploration" in response.text
+    assert "Exploring randomly" in response.text
+
+
+def test_recommendation_insights_no_prediction_first_shot(active_client, sample_bean):
+    """First recommendation (random phase) shows no predicted_range in response."""
+    from unittest.mock import MagicMock
+
+    rec_id = str(uuid.uuid4())
+    rec = _make_rec(rec_id)
+    rec["insights"] = {
+        "phase": "random",
+        "phase_label": "Random exploration",
+        "explanation": "Exploring randomly — building initial understanding of the parameter space.",
+        "predicted_mean": None,
+        "predicted_std": None,
+        "predicted_range": None,
+        "shot_count": 0,
+    }
+
+    if not hasattr(app.state, "pending_recommendations"):
+        app.state.pending_recommendations = {}
+    app.state.pending_recommendations[rec_id] = rec
+
+    response = active_client.get(f"/brew/recommend/{rec_id}")
+    assert response.status_code == 200
+    # No predicted taste range shown for first shot
+    assert "Expected taste" not in response.text
+    assert "insight-prediction" not in response.text
