@@ -16,7 +16,7 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Rename BrewFlow to BeanBay in all code, templates, and tests
+- [x] 07-01-PLAN.md — Rename BrewFlow to BeanBay in all code, templates, and tests
 - [ ] 07-02-PLAN.md — Fix all 5 tech debt items (dedup helper, persist recs, Alembic migration, error feedback, remove dead dir)
 
 **Success criteria:**
