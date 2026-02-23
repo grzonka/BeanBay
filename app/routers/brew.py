@@ -2,6 +2,7 @@
 
 Implements the core espresso optimization workflow:
   GET  /brew                         — Main brew page
+  POST /brew/set-setup               — Set active brew setup (cookie)
   POST /brew/recommend               — Trigger BayBE recommendation
   GET  /brew/recommend/{rec_id}      — Display recommendation + rate form
   POST /brew/record                  — Record measurement (taste/failed)
@@ -23,6 +24,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.models.bean import Bean
+from app.models.brew_setup import BrewSetup
 from app.models.measurement import Measurement
 from app.routers.beans import _get_active_bean
 from app.services.optimizer import DEFAULT_BOUNDS, _resolve_bounds, _round_value
@@ -105,6 +107,18 @@ def _brew_ratio(dose_in: float, target_yield: float) -> str:
     return "—"
 
 
+def _get_active_setup(request: Request, db: Session) -> Optional[BrewSetup]:
+    """Return active brew setup from cookie, or None if not set / retired / deleted."""
+    setup_id = request.cookies.get("active_setup_id")
+    if not setup_id:
+        return None
+    return (
+        db.query(BrewSetup)
+        .filter(BrewSetup.id == setup_id, BrewSetup.is_retired == False)  # noqa: E712
+        .first()
+    )
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -114,21 +128,52 @@ def _brew_ratio(dose_in: float, target_yield: float) -> str:
 async def brew_index(request: Request, db: Session = Depends(get_db)):
     """Main brew page — entry point for the optimization loop."""
     bean = _require_active_bean(request, db)
-    if not bean:
-        return templates.TemplateResponse(
-            request,
-            "brew/index.html",
-            {"no_active_bean": True},
-        )
+    active_setup = _get_active_setup(request, db)
 
-    has_measurements = db.query(Measurement).filter(Measurement.bean_id == bean.id).count() > 0
+    has_measurements = False
     beans = db.query(Bean).order_by(Bean.name).all()
+    setups = (
+        db.query(BrewSetup).filter(BrewSetup.is_retired == False).order_by(BrewSetup.name).all()  # noqa: E712
+    )
+
+    if bean:
+        has_measurements = db.query(Measurement).filter(Measurement.bean_id == bean.id).count() > 0
 
     return templates.TemplateResponse(
         request,
         "brew/index.html",
-        {"active_bean": bean, "has_measurements": has_measurements, "beans": beans},
+        {
+            "active_bean": bean,
+            "active_setup": active_setup,
+            "has_measurements": has_measurements,
+            "beans": beans,
+            "setups": setups,
+        },
     )
+
+
+@router.post("/set-setup", response_class=HTMLResponse)
+async def set_active_setup(
+    request: Request,
+    setup_id: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Set the active brew setup (stored in cookie)."""
+    setup = (
+        db.query(BrewSetup)
+        .filter(BrewSetup.id == setup_id, BrewSetup.is_retired == False)  # noqa: E712
+        .first()
+    )
+    response = RedirectResponse(url="/brew", status_code=303)
+    if setup:
+        response.set_cookie(
+            key="active_setup_id",
+            value=str(setup.id),
+            max_age=60 * 60 * 24 * 365,  # 1 year
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 @router.post("/recommend", response_class=HTMLResponse)
