@@ -1,7 +1,7 @@
 # Project State: BeanBay
 
 **Last updated:** 2026-02-23
-**Current phase:** Phase 14 — Equipment Management
+**Current phase:** Phase 14 — Equipment Management ✅ COMPLETE
 
 ## Project Reference
 
@@ -21,18 +21,18 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 14 of 16 (Equipment Management) — 🔄 In progress
-Plan: 4 of 5 complete
-Status: In progress
-Last activity: 2026-02-23 — Completed 14-04-PLAN.md (brew setup assembly wizard + setup cards)
+Phase: 14 of 16 (Equipment Management) — ✅ Complete
+Plan: 5 of 5 complete
+Status: Phase complete — ready for Phase 15
+Last activity: 2026-02-23 — Completed 14-05-PLAN.md (retire/restore lifecycle + brew page setup selection + 23 tests)
 
-Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 54% (7/13 v0.2.0 plans)
+Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 62% (8/13 v0.2.0 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-  - Total plans completed: 34 (v1: 16, v0.1.0: 5, v0.1.1: 8, v0.2.0: 5)
-  - Total phases completed: 13 complete, 14 in progress
+  - Total plans completed: 35 (v1: 16, v0.1.0: 5, v0.1.1: 8, v0.2.0: 6)
+  - Total phases completed: 14 complete, 15 pending
   - All milestones shipped same day (Feb 22, 2026)
 
 ## Accumulated Context
@@ -50,6 +50,12 @@ See: .planning/PROJECT.md (Key Decisions table — 22 decisions tracked)
 - **Bean bags model:** A "coffee" can have multiple bags. Same coffee bought twice shares identity, enabling richer history and transfer learning similarity matching.
 - **Beanconqueror import deferred:** Moved to backlog, not in v0.2 scope.
 
+### Phase 14 Key Decisions
+- **Retire-only pattern (no deletion):** Preserves history; retired equipment hidden by default, shown with toggle
+- **Cascade retire, manual restore:** Retiring a component auto-retires all setups using it; restoring does NOT cascade
+- **active_setup_id cookie:** Same pattern as active_bean_id; 1-year expiry; cleared if setup is retired
+- **Setup is context for brew page:** Brew action buttons require a bean but setup is optional (for future BayBE integration)
+
 ### Quick Tasks Completed
 
 | ID | Task | Date |
@@ -60,13 +66,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22 decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-23
-- **What happened:** Executed Phase 14 Plan 04. Built 5-step brew setup assembly wizard (Brewer→Grinder→Filter→Water→Name) with single-page JS navigation, auto-name suggestion, and optional paper step. Added 4 routes (create/edit). Added Brew Setups section at top of equipment page (open by default) with compact setup cards. 170/170 tests passing.
-- **Where we left off:** Phase 14 plan 4 of 5 done. Ready for 14-05 (retire/restore lifecycle + brew page setup selection + comprehensive tests).
+- **What happened:** Executed Phase 14 Plan 05 (final plan). Added retire/restore lifecycle for all 5 equipment types with cascade, brew page two-panel layout with setup+bean selection (cookie-persisted), and 23 new tests (193/193 passing).
+- **Where we left off:** Phase 14 complete (5/5 plans done). Ready for Phase 15.
 
 ### Next Steps
-1. Execute Phase 14-05 (Retire/restore lifecycle, brew page setup selection, comprehensive tests)
-2. Continue to Phase 15 and 16
+1. Execute Phase 15 (Bean bags and coffee identity)
+2. Continue to Phase 16 (BayBE intelligence integration)
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-23 — Phase 14 plan 4/5 done (brew setup assembly wizard + setup cards)*
+*Last updated: 2026-02-23 — Phase 14 complete (5/5 plans, retire/restore lifecycle, brew page setup selection, 193 tests)*
