@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "The recommendation page shows Bayesian optimization badge after only 1 shot has been recorded"
 created: 2026-02-22T00:00:00Z
 updated: 2026-02-22T00:00:00Z
@@ -85,8 +85,9 @@ root_cause: |
   threshold (1 measurement) is far too low for the label "Bayesian optimization"
   to be meaningful to a user.
 
-fix: Not yet applied (diagnose-only mode)
+fix: Applied — switch_after=5 now passed to TwoPhaseMetaRecommender constructor (optimizer.py line 123)
 
-verification: N/A
+verification: confirmed — switch_after=5 present in optimizer.py, 240 tests pass
 
-files_changed: []
+files_changed:
+  - app/services/optimizer.py line 123

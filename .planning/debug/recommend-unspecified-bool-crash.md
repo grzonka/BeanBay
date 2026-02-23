@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "App crashes with UNSPECIFIED has no Boolean representation when GET /brew/recommend is called"
 created: 2026-02-22T00:00:00Z
 updated: 2026-02-22T00:00:00Z
@@ -132,6 +132,6 @@ fix: |
   The correct long-term fix is a BayBE upstream patch to guard line 516 with
   `and self.allow_recommending_already_recommended is not UNSPECIFIED`.
 
-verification: pending
+verification: confirmed — campaign.clear_cache() present in optimizer.py, 240 tests pass
 files_changed:
   - app/services/optimizer.py line 192-193

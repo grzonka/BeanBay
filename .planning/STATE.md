@@ -42,7 +42,7 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Branding
 - **Name:** BeanBay | **Domain:** beanbay.coffee
-- **Docker:** ghcr.io/grzonka/beanbay | **Latest release:** v0.1.1
+- **Docker:** ghcr.io/grzonka/beanbay | **Latest release:** v0.2.0
 
 ### v0.2.0 Key Design Decisions (from questioning phase)
 - **Equipment as context:** Equipment defines the experiment context; BayBE optimizes recipe variables within that context. Comparison between equipment setups happens at analytics level, not optimizer level.
@@ -82,8 +82,8 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **Where we left off:** Phase 16 complete. v0.2.0 feature-complete.
 
 ### Next Steps
-1. Tag v0.2.0 release
-2. Update Docker image
+1. ✅ Tag v0.2.0 release — done (2026-02-23)
+2. ✅ Docker image published — ghcr.io/grzonka/beanbay:v0.2.0 (CI triggered by tag push)
 3. Plan next milestone (backlog)
 
 ---

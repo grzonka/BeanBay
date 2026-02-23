@@ -5,7 +5,7 @@
 - ✅ **v1 MVP** — Phases 1-6 (shipped 2026-02-22)
 - ✅ **v0.1.0 Release & Deploy** — Phases 7-9 (shipped 2026-02-22)
 - ✅ **v0.1.1 UX Polish & Manual Brew** — Phases 10-12 (shipped 2026-02-22)
-- 🔄 **v0.2.0 Multi-Method & Intelligence** — Phases 13-16
+- ✅ **v0.2.0 Multi-Method & Intelligence** — Phases 13-16 (shipped 2026-02-23)
 
 ## Phases
 
@@ -181,4 +181,4 @@ Phase 16 (Transfer Learning)
 | 13 | v0.2.0 | 3/3 | Complete | 2026-02-22 |
 | 14 | v0.2.0 | 5/5 | Complete | 2026-02-23 |
 | 15 | v0.2.0 | 3/3 | Complete | 2026-02-23 |
-| 16 | v0.2.0 | 0/TBD | Pending | — |
+| 16 | v0.2.0 | 2/2 | Complete | 2026-02-23 |
