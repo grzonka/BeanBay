@@ -18,5 +18,14 @@
     >
       Edit
     </button>
+    {% if paper.is_retired %}
+      <form method="post" action="/equipment/papers/{{ paper.id }}/restore" style="display:inline;">
+        <button type="submit" class="btn btn-primary btn-sm">Restore</button>
+      </form>
+    {% else %}
+      <form method="post" action="/equipment/papers/{{ paper.id }}/retire" style="display:inline;">
+        <button type="submit" class="btn btn-danger btn-sm">Retire</button>
+      </form>
+    {% endif %}
   </div>
 </div>

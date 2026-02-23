@@ -1,6 +1,11 @@
 {# Compact brew setup card — used in the Brew Setups section of equipment/index.html #}
-<div class="setup-card">
-  <div class="setup-card-name">{{ setup.name }}</div>
+<div class="setup-card{% if setup.is_retired %} setup-card-retired{% endif %}">
+  <div class="setup-card-name">
+    {{ setup.name }}
+    {% if setup.is_retired %}
+      <span class="badge badge-retired" style="margin-left: 6px; font-size: var(--text-xs);">Retired</span>
+    {% endif %}
+  </div>
   <div class="setup-card-components">
     {% if setup.brewer %}
       <span class="setup-card-component">{{ setup.brewer.name }}</span>
@@ -20,5 +25,14 @@
   </div>
   <div class="card-actions">
     <a href="/equipment/setups/{{ setup.id }}/edit" class="btn btn-secondary btn-sm">Edit</a>
+    {% if setup.is_retired %}
+      <form method="post" action="/equipment/setups/{{ setup.id }}/restore" style="display:inline;">
+        <button type="submit" class="btn btn-primary btn-sm">Restore</button>
+      </form>
+    {% else %}
+      <form method="post" action="/equipment/setups/{{ setup.id }}/retire" style="display:inline;">
+        <button type="submit" class="btn btn-danger btn-sm">Retire</button>
+      </form>
+    {% endif %}
   </div>
 </div>

@@ -1877,3 +1877,7 @@ body {
 .setup-card-component:first-child::before {
   display: none;
 }
+
+.setup-card-retired {
+  opacity: 0.6;
+}

@@ -561,3 +561,182 @@ async def update_setup(
     db.commit()
 
     return RedirectResponse(url="/equipment", status_code=303)
+
+
+# ── Retire / Restore routes ──────────────────────────────────────────────────
+
+
+def _auto_retire_setups_for_grinder(db: Session, grinder_id: str) -> None:
+    """Auto-retire all active BrewSetups that use this grinder."""
+    db.query(BrewSetup).filter(
+        BrewSetup.grinder_id == grinder_id,
+        BrewSetup.is_retired.is_(False),
+    ).update({"is_retired": True}, synchronize_session=False)
+
+
+def _auto_retire_setups_for_brewer(db: Session, brewer_id: str) -> None:
+    """Auto-retire all active BrewSetups that use this brewer."""
+    db.query(BrewSetup).filter(
+        BrewSetup.brewer_id == brewer_id,
+        BrewSetup.is_retired.is_(False),
+    ).update({"is_retired": True}, synchronize_session=False)
+
+
+def _auto_retire_setups_for_paper(db: Session, paper_id: str) -> None:
+    """Auto-retire all active BrewSetups that use this paper."""
+    db.query(BrewSetup).filter(
+        BrewSetup.paper_id == paper_id,
+        BrewSetup.is_retired.is_(False),
+    ).update({"is_retired": True}, synchronize_session=False)
+
+
+def _auto_retire_setups_for_water_recipe(db: Session, water_recipe_id: str) -> None:
+    """Auto-retire all active BrewSetups that use this water recipe."""
+    db.query(BrewSetup).filter(
+        BrewSetup.water_recipe_id == water_recipe_id,
+        BrewSetup.is_retired.is_(False),
+    ).update({"is_retired": True}, synchronize_session=False)
+
+
+@router.post("/grinders/{grinder_id}/retire", response_class=HTMLResponse)
+async def retire_grinder(
+    request: Request,
+    grinder_id: str,
+    db: Session = Depends(get_db),
+):
+    """Retire a grinder and auto-retire all setups using it."""
+    grinder = db.query(Grinder).filter(Grinder.id == grinder_id).first()
+    if grinder:
+        grinder.is_retired = True
+        _auto_retire_setups_for_grinder(db, grinder_id)
+        db.commit()
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+@router.post("/grinders/{grinder_id}/restore", response_class=HTMLResponse)
+async def restore_grinder(
+    request: Request,
+    grinder_id: str,
+    db: Session = Depends(get_db),
+):
+    """Restore a retired grinder (does not auto-restore setups)."""
+    grinder = db.query(Grinder).filter(Grinder.id == grinder_id).first()
+    if grinder:
+        grinder.is_retired = False
+        db.commit()
+    return RedirectResponse(url="/equipment?show_retired=true", status_code=303)
+
+
+@router.post("/brewers/{brewer_id}/retire", response_class=HTMLResponse)
+async def retire_brewer(
+    request: Request,
+    brewer_id: str,
+    db: Session = Depends(get_db),
+):
+    """Retire a brewer and auto-retire all setups using it."""
+    brewer = db.query(Brewer).filter(Brewer.id == brewer_id).first()
+    if brewer:
+        brewer.is_retired = True
+        _auto_retire_setups_for_brewer(db, brewer_id)
+        db.commit()
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+@router.post("/brewers/{brewer_id}/restore", response_class=HTMLResponse)
+async def restore_brewer(
+    request: Request,
+    brewer_id: str,
+    db: Session = Depends(get_db),
+):
+    """Restore a retired brewer (does not auto-restore setups)."""
+    brewer = db.query(Brewer).filter(Brewer.id == brewer_id).first()
+    if brewer:
+        brewer.is_retired = False
+        db.commit()
+    return RedirectResponse(url="/equipment?show_retired=true", status_code=303)
+
+
+@router.post("/papers/{paper_id}/retire", response_class=HTMLResponse)
+async def retire_paper(
+    request: Request,
+    paper_id: str,
+    db: Session = Depends(get_db),
+):
+    """Retire a paper/filter and auto-retire all setups using it."""
+    paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    if paper:
+        paper.is_retired = True
+        _auto_retire_setups_for_paper(db, paper_id)
+        db.commit()
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+@router.post("/papers/{paper_id}/restore", response_class=HTMLResponse)
+async def restore_paper(
+    request: Request,
+    paper_id: str,
+    db: Session = Depends(get_db),
+):
+    """Restore a retired paper/filter (does not auto-restore setups)."""
+    paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    if paper:
+        paper.is_retired = False
+        db.commit()
+    return RedirectResponse(url="/equipment?show_retired=true", status_code=303)
+
+
+@router.post("/water-recipes/{recipe_id}/retire", response_class=HTMLResponse)
+async def retire_water_recipe(
+    request: Request,
+    recipe_id: str,
+    db: Session = Depends(get_db),
+):
+    """Retire a water recipe and auto-retire all setups using it."""
+    recipe = db.query(WaterRecipe).filter(WaterRecipe.id == recipe_id).first()
+    if recipe:
+        recipe.is_retired = True
+        _auto_retire_setups_for_water_recipe(db, recipe_id)
+        db.commit()
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+@router.post("/water-recipes/{recipe_id}/restore", response_class=HTMLResponse)
+async def restore_water_recipe(
+    request: Request,
+    recipe_id: str,
+    db: Session = Depends(get_db),
+):
+    """Restore a retired water recipe (does not auto-restore setups)."""
+    recipe = db.query(WaterRecipe).filter(WaterRecipe.id == recipe_id).first()
+    if recipe:
+        recipe.is_retired = False
+        db.commit()
+    return RedirectResponse(url="/equipment?show_retired=true", status_code=303)
+
+
+@router.post("/setups/{setup_id}/retire", response_class=HTMLResponse)
+async def retire_setup(
+    request: Request,
+    setup_id: str,
+    db: Session = Depends(get_db),
+):
+    """Retire a brew setup directly."""
+    setup = db.query(BrewSetup).filter(BrewSetup.id == setup_id).first()
+    if setup:
+        setup.is_retired = True
+        db.commit()
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+@router.post("/setups/{setup_id}/restore", response_class=HTMLResponse)
+async def restore_setup(
+    request: Request,
+    setup_id: str,
+    db: Session = Depends(get_db),
+):
+    """Restore a retired brew setup."""
+    setup = db.query(BrewSetup).filter(BrewSetup.id == setup_id).first()
+    if setup:
+        setup.is_retired = False
+        db.commit()
+    return RedirectResponse(url="/equipment?show_retired=true", status_code=303)
