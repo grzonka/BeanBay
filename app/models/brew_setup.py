@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -16,6 +16,7 @@ class BrewSetup(Base):
     brewer_id = Column(String, ForeignKey("brewers.id"), nullable=True)
     paper_id = Column(String, ForeignKey("papers.id"), nullable=True)
     water_recipe_id = Column(String, ForeignKey("water_recipes.id"), nullable=True)
+    is_retired = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, server_default=func.now())
 
     brew_method = relationship("BrewMethod")
