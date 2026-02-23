@@ -22,11 +22,11 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 14 of 16 (Equipment Management) — 🔄 In progress
-Plan: 2 of 5 complete
+Plan: 3 of 5 complete
 Status: In progress
-Last activity: 2026-02-23 — Completed 14-02-PLAN.md (equipment router + grinder/brewer CRUD UI)
+Last activity: 2026-02-23 — Completed 14-03-PLAN.md (paper/water recipe CRUD + 17 equipment tests)
 
-Progress: [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 38% (5/13 v0.2.0 plans)
+Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 46% (6/13 v0.2.0 plans)
 
 ## Performance Metrics
 
@@ -60,13 +60,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22 decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-23
-- **What happened:** Executed Phase 14 Plan 01. Extended all Phase 13 equipment models: Grinder (dial_type, step_size, min_value, max_value, is_retired), Brewer (is_retired, methods many-to-many via brewer_methods), Paper (description, is_retired), WaterRecipe (notes, 7 mineral fields, is_retired), BrewSetup (is_retired). Created idempotent Alembic migration e32844be4891. 153/153 tests pass.
-- **Where we left off:** Phase 14 plan 1 of 5 done. Ready for 14-02 (equipment router + CRUD UI).
+- **What happened:** Executed Phase 14 Plan 03. Added paper/filter CRUD and water recipe CRUD (all 7 mineral fields) to equipment router and page. Created all 4 card/form templates. 17 new equipment tests, 170/170 total passing.
+- **Where we left off:** Phase 14 plan 3 of 5 done. Ready for 14-04 (brew setup assembly wizard).
 
 ### Next Steps
-1. Execute Phase 14-02 (Equipment router, page layout, grinder/brewer CRUD with modal forms)
-2. Execute Phase 14-03 (Paper/water recipe CRUD + equipment tests)
-3. Continue to Phase 14-04, 14-05, then Phase 15 and 16
+1. Execute Phase 14-04 (Brew setup assembly wizard — multi-step)
+2. Execute Phase 14-05 (Retire/restore lifecycle, brew page setup selection, comprehensive tests)
+3. Continue to Phase 15 and 16
 
 ---
 *State initialized: 2026-02-21*
