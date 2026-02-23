@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+
+{% block title %}{% if edit_mode %}Edit Setup{% else %}Create Setup{% endif %} — BeanBay{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">{% if edit_mode %}Edit Setup{% else %}Create Setup{% endif %}</h1>
+  <a href="/equipment" class="btn btn-secondary btn-sm">Cancel</a>
+</div>
+
+{# Step indicator #}
+<div class="wizard-steps" id="wizard-steps" aria-label="Setup wizard steps">
+  <div class="wizard-step active" data-step="0">1<span class="wizard-step-label">Brewer</span></div>
+  <div class="wizard-step-connector"></div>
+  <div class="wizard-step" data-step="1">2<span class="wizard-step-label">Grinder</span></div>
+  <div class="wizard-step-connector"></div>
+  <div class="wizard-step" data-step="2">3<span class="wizard-step-label">Filter</span></div>
+  <div class="wizard-step-connector"></div>
+  <div class="wizard-step" data-step="3">4<span class="wizard-step-label">Water</span></div>
+  <div class="wizard-step-connector"></div>
+  <div class="wizard-step" data-step="4">5<span class="wizard-step-label">Name</span></div>
+</div>
+
+<form
+  method="post"
+  action="{% if edit_mode %}/equipment/setups/{{ setup.id }}{% else %}/equipment/setups{% endif %}"
+  id="wizard-form"
+>
+
+  {# ── Step 1: Pick a Brewer ──────────────────────────────────── #}
+  <div class="wizard-step-content active" id="step-0">
+    <h2 class="wizard-step-title">Pick a Brewer</h2>
+
+    {% if brewers %}
+      <div class="wizard-options" role="radiogroup" aria-label="Choose a brewer">
+        {% for brewer in brewers %}
+          <label class="wizard-option-card {% if edit_mode and setup.brewer_id == brewer.id %}selected{% endif %}">
+            <input
+              type="radio"
+              name="brewer_id"
+              value="{{ brewer.id }}"
+              {% if edit_mode and setup.brewer_id == brewer.id %}checked{% endif %}
+              onchange="this.closest('.wizard-options').querySelectorAll('.wizard-option-card').forEach(c=>c.classList.remove('selected')); this.closest('.wizard-option-card').classList.add('selected')"
+              required
+            >
+            <div class="wizard-option-name">{{ brewer.name }}</div>
+            {% if brewer.methods %}
+              <div class="method-tags" style="margin-top: var(--spacing-xs);">
+                {% for method in brewer.methods %}
+                  <span class="method-tag">{{ method.name }}</span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="wizard-option-meta">No methods assigned</div>
+            {% endif %}
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: var(--spacing-lg) 0;">
+        <div class="empty-state-text">No brewers yet.</div>
+      </div>
+    {% endif %}
+
+    <a href="/equipment" class="wizard-add-link">+ Add a brewer first</a>
+  </div>
+
+  {# ── Step 2: Pick a Grinder ─────────────────────────────────── #}
+  <div class="wizard-step-content" id="step-1">
+    <h2 class="wizard-step-title">Pick a Grinder</h2>
+
+    {% if grinders %}
+      <div class="wizard-options" role="radiogroup" aria-label="Choose a grinder">
+        {% for grinder in grinders %}
+          <label class="wizard-option-card {% if edit_mode and setup.grinder_id == grinder.id %}selected{% endif %}">
+            <input
+              type="radio"
+              name="grinder_id"
+              value="{{ grinder.id }}"
+              {% if edit_mode and setup.grinder_id == grinder.id %}checked{% endif %}
+              onchange="this.closest('.wizard-options').querySelectorAll('.wizard-option-card').forEach(c=>c.classList.remove('selected')); this.closest('.wizard-option-card').classList.add('selected')"
+              required
+            >
+            <div class="wizard-option-name">{{ grinder.name }}</div>
+            <div class="wizard-option-meta">
+              {% if grinder.dial_type == "stepped" %}
+                Stepped{% if grinder.step_size is not none %} · step {{ grinder.step_size }}{% endif %}
+              {% else %}
+                Stepless
+              {% endif %}
+              {% if grinder.min_value is not none and grinder.max_value is not none %}
+                · {{ grinder.min_value }}–{{ grinder.max_value }}
+              {% endif %}
+            </div>
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: var(--spacing-lg) 0;">
+        <div class="empty-state-text">No grinders yet.</div>
+      </div>
+    {% endif %}
+
+    <a href="/equipment" class="wizard-add-link">+ Add a grinder first</a>
+  </div>
+
+  {# ── Step 3: Pick a Paper / Filter (optional) ───────────────── #}
+  <div class="wizard-step-content" id="step-2">
+    <h2 class="wizard-step-title">Pick a Filter <span class="wizard-optional-label">(optional)</span></h2>
+
+    <div class="wizard-options" role="radiogroup" aria-label="Choose a filter or skip">
+      {# Skip option — always first #}
+      <label class="wizard-option-card {% if not edit_mode or not setup.paper_id %}selected{% endif %}">
+        <input
+          type="radio"
+          name="paper_id"
+          value=""
+          {% if not edit_mode or not setup.paper_id %}checked{% endif %}
+          onchange="this.closest('.wizard-options').querySelectorAll('.wizard-option-card').forEach(c=>c.classList.remove('selected')); this.closest('.wizard-option-card').classList.add('selected')"
+        >
+        <div class="wizard-option-name">None / Skip</div>
+        <div class="wizard-option-meta">No paper filter used</div>
+      </label>
+
+      {% for paper in papers %}
+        <label class="wizard-option-card {% if edit_mode and setup.paper_id == paper.id %}selected{% endif %}">
+          <input
+            type="radio"
+            name="paper_id"
+            value="{{ paper.id }}"
+            {% if edit_mode and setup.paper_id == paper.id %}checked{% endif %}
+            onchange="this.closest('.wizard-options').querySelectorAll('.wizard-option-card').forEach(c=>c.classList.remove('selected')); this.closest('.wizard-option-card').classList.add('selected')"
+          >
+          <div class="wizard-option-name">{{ paper.name }}</div>
+          {% if paper.description %}
+            <div class="wizard-option-meta">{{ paper.description }}</div>
+          {% endif %}
+        </label>
+      {% endfor %}
+    </div>
+
+    {% if not papers %}
+      <a href="/equipment" class="wizard-add-link">+ Add a paper first</a>
+    {% endif %}
+  </div>
+
+  {# ── Step 4: Pick a Water Recipe ────────────────────────────── #}
+  <div class="wizard-step-content" id="step-3">
+    <h2 class="wizard-step-title">Pick a Water Recipe</h2>
+
+    {% if water_recipes %}
+      <div class="wizard-options" role="radiogroup" aria-label="Choose a water recipe">
+        {% for recipe in water_recipes %}
+          <label class="wizard-option-card {% if edit_mode and setup.water_recipe_id == recipe.id %}selected{% endif %}">
+            <input
+              type="radio"
+              name="water_recipe_id"
+              value="{{ recipe.id }}"
+              {% if edit_mode and setup.water_recipe_id == recipe.id %}checked{% endif %}
+              onchange="this.closest('.wizard-options').querySelectorAll('.wizard-option-card').forEach(c=>c.classList.remove('selected')); this.closest('.wizard-option-card').classList.add('selected')"
+              required
+            >
+            <div class="wizard-option-name">{{ recipe.name }}</div>
+            {% if recipe.notes %}
+              <div class="wizard-option-meta">{{ recipe.notes }}</div>
+            {% endif %}
+            {% set minerals = [] %}
+            {% if recipe.gh is not none %}{% set _ = minerals.append("GH: " ~ recipe.gh|int) %}{% endif %}
+            {% if recipe.kh is not none %}{% set _ = minerals.append("KH: " ~ recipe.kh|int) %}{% endif %}
+            {% if recipe.ca is not none %}{% set _ = minerals.append("Ca: " ~ recipe.ca|int) %}{% endif %}
+            {% if recipe.mg is not none %}{% set _ = minerals.append("Mg: " ~ recipe.mg|int) %}{% endif %}
+            {% if minerals %}
+              <div class="wizard-option-meta" style="font-size: var(--text-xs);">{{ minerals | join(" · ") }}</div>
+            {% endif %}
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding: var(--spacing-lg) 0;">
+        <div class="empty-state-text">No water recipes yet.</div>
+      </div>
+    {% endif %}
+
+    <a href="/equipment" class="wizard-add-link">+ Add a water recipe first</a>
+  </div>
+
+  {# ── Step 5: Name Your Setup ─────────────────────────────────── #}
+  <div class="wizard-step-content" id="step-4">
+    <h2 class="wizard-step-title">Name Your Setup</h2>
+
+    <div class="form-group" style="margin-bottom: var(--spacing-lg);">
+      <label class="form-label" for="setup-name">Setup Name</label>
+      <input
+        type="text"
+        id="setup-name"
+        name="name"
+        class="form-input"
+        placeholder="e.g. Morning V60"
+        value="{% if edit_mode %}{{ setup.name or '' }}{% endif %}"
+        required
+        autocomplete="off"
+        style="font-size: var(--text-base); padding: var(--spacing-md);"
+      >
+      <p class="form-hint">Give this combination a memorable name.</p>
+    </div>
+
+    {# Summary of selected components #}
+    <div class="setup-summary-preview card" id="setup-summary-preview" style="margin-bottom: var(--spacing-lg);">
+      <div class="card-title" style="margin-bottom: var(--spacing-sm);">Your Setup</div>
+      <div id="summary-brewer" class="setup-summary-row">
+        <span class="setup-summary-label">Brewer:</span>
+        <span class="setup-summary-value" id="summary-brewer-name">—</span>
+      </div>
+      <div id="summary-grinder" class="setup-summary-row">
+        <span class="setup-summary-label">Grinder:</span>
+        <span class="setup-summary-value" id="summary-grinder-name">—</span>
+      </div>
+      <div id="summary-paper" class="setup-summary-row">
+        <span class="setup-summary-label">Filter:</span>
+        <span class="setup-summary-value" id="summary-paper-name">None</span>
+      </div>
+      <div id="summary-water" class="setup-summary-row">
+        <span class="setup-summary-label">Water:</span>
+        <span class="setup-summary-value" id="summary-water-name">—</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Navigation buttons ──────────────────────────────────────── #}
+  <div class="wizard-nav">
+    <button
+      type="button"
+      id="btn-back"
+      class="btn btn-secondary"
+      onclick="wizardBack()"
+      style="display:none; min-height: 48px; flex: 1;"
+    >
+      ← Back
+    </button>
+    <button
+      type="button"
+      id="btn-next"
+      class="btn btn-primary"
+      onclick="wizardNext()"
+      style="min-height: 48px; flex: 1;"
+    >
+      Next →
+    </button>
+    <button
+      type="submit"
+      id="btn-submit"
+      class="btn btn-primary"
+      style="display:none; min-height: 48px; flex: 1;"
+    >
+      {% if edit_mode %}Save Setup{% else %}Create Setup{% endif %}
+    </button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  var totalSteps = 5;
+  var currentStep = 0;
+
+  // Names map for summary (brewer/grinder/water) — built from server-rendered data
+  var BREWERS = {
+    {% for brewer in brewers %}"{{ brewer.id }}": "{{ brewer.name }}"{% if not loop.last %},{% endif %}{% endfor %}
+  };
+  var GRINDERS = {
+    {% for grinder in grinders %}"{{ grinder.id }}": "{{ grinder.name }}"{% if not loop.last %},{% endif %}{% endfor %}
+  };
+  var PAPERS = {
+    {% for paper in papers %}"{{ paper.id }}": "{{ paper.name }}"{% if not loop.last %},{% endif %}{% endfor %}
+  };
+  var WATER_RECIPES = {
+    {% for recipe in water_recipes %}"{{ recipe.id }}": "{{ recipe.name }}"{% if not loop.last %},{% endif %}{% endfor %}
+  };
+
+  function showStep(n) {
+    document.querySelectorAll('.wizard-step-content').forEach(function(el, i) {
+      el.classList.toggle('active', i === n);
+    });
+    document.querySelectorAll('.wizard-step[data-step]').forEach(function(el) {
+      var idx = parseInt(el.dataset.step);
+      el.classList.toggle('active', idx === n);
+      el.classList.toggle('done', idx < n);
+    });
+    document.getElementById('btn-back').style.display = n > 0 ? 'block' : 'none';
+    document.getElementById('btn-next').style.display = n < totalSteps - 1 ? 'block' : 'none';
+    document.getElementById('btn-submit').style.display = n === totalSteps - 1 ? 'block' : 'none';
+
+    // When entering step 5 (Name), auto-fill name and update summary
+    if (n === 4) {
+      updateSummary();
+      autoFillName();
+    }
+  }
+
+  function getSelectedValue(name) {
+    var radio = document.querySelector('input[name="' + name + '"]:checked');
+    return radio ? radio.value : null;
+  }
+
+  function validateStep(n) {
+    if (n === 0) {
+      if (!getSelectedValue('brewer_id')) {
+        alert('Please select a brewer to continue.');
+        return false;
+      }
+    } else if (n === 1) {
+      if (!getSelectedValue('grinder_id')) {
+        alert('Please select a grinder to continue.');
+        return false;
+      }
+    } else if (n === 3) {
+      if (!getSelectedValue('water_recipe_id')) {
+        alert('Please select a water recipe to continue.');
+        return false;
+      }
+    } else if (n === 4) {
+      var nameInput = document.getElementById('setup-name');
+      if (!nameInput.value.trim()) {
+        nameInput.focus();
+        alert('Please give your setup a name.');
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function updateSummary() {
+    var brewerId = getSelectedValue('brewer_id');
+    var grinderId = getSelectedValue('grinder_id');
+    var paperId = getSelectedValue('paper_id');
+    var waterId = getSelectedValue('water_recipe_id');
+
+    document.getElementById('summary-brewer-name').textContent = brewerId && BREWERS[brewerId] ? BREWERS[brewerId] : '—';
+    document.getElementById('summary-grinder-name').textContent = grinderId && GRINDERS[grinderId] ? GRINDERS[grinderId] : '—';
+    document.getElementById('summary-paper-name').textContent = paperId && PAPERS[paperId] ? PAPERS[paperId] : 'None';
+    document.getElementById('summary-water-name').textContent = waterId && WATER_RECIPES[waterId] ? WATER_RECIPES[waterId] : '—';
+  }
+
+  function autoFillName() {
+    var nameInput = document.getElementById('setup-name');
+    // Only auto-fill if empty (don't overwrite existing or edit-mode value)
+    if (nameInput.value.trim()) return;
+
+    var brewerId = getSelectedValue('brewer_id');
+    var grinderId = getSelectedValue('grinder_id');
+    var parts = [];
+    if (brewerId && BREWERS[brewerId]) parts.push(BREWERS[brewerId]);
+    if (grinderId && GRINDERS[grinderId]) parts.push(GRINDERS[grinderId]);
+    if (parts.length > 0) {
+      nameInput.value = parts.join(' + ');
+      nameInput.select();
+    }
+  }
+
+  window.wizardNext = function() {
+    if (!validateStep(currentStep)) return;
+    if (currentStep < totalSteps - 1) {
+      currentStep++;
+      showStep(currentStep);
+    }
+  };
+
+  window.wizardBack = function() {
+    if (currentStep > 0) {
+      currentStep--;
+      showStep(currentStep);
+    }
+  };
+
+  // Initialize
+  showStep(currentStep);
+
+  // In edit mode, pre-populate summary immediately
+  {% if edit_mode %}
+  updateSummary();
+  {% endif %}
+})();
+</script>
+{% endblock %}

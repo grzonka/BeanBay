@@ -1,14 +1,15 @@
-"""Equipment management routes — grinders, brewers, papers, water recipes."""
+"""Equipment management routes — grinders, brewers, papers, water recipes, brew setups."""
 
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.brew_method import BrewMethod
+from app.models.brew_setup import BrewSetup
 from app.models.equipment import Brewer, Grinder, Paper, WaterRecipe
 
 router = APIRouter(prefix="/equipment", tags=["equipment"])
@@ -58,11 +59,27 @@ async def equipment_index(
 
     brew_methods = db.query(BrewMethod).order_by(BrewMethod.name).all()
 
+    # Load brew setups with all related objects (no N+1 queries)
+    setups = (
+        db.query(BrewSetup)
+        .options(
+            joinedload(BrewSetup.grinder),
+            joinedload(BrewSetup.brewer),
+            joinedload(BrewSetup.paper),
+            joinedload(BrewSetup.water_recipe),
+            joinedload(BrewSetup.brew_method),
+        )
+        .filter(BrewSetup.is_retired.is_(False))
+        .order_by(BrewSetup.name)
+        .all()
+    )
+
     # Counts for badges
     grinder_count = len(grinders)
     brewer_count = len(brewers)
     paper_count = len(papers)
     water_recipe_count = len(water_recipes)
+    setup_count = len(setups)
 
     return templates.TemplateResponse(
         request,
@@ -73,10 +90,12 @@ async def equipment_index(
             "papers": papers,
             "water_recipes": water_recipes,
             "brew_methods": brew_methods,
+            "setups": setups,
             "grinder_count": grinder_count,
             "brewer_count": brewer_count,
             "paper_count": paper_count,
             "water_recipe_count": water_recipe_count,
+            "setup_count": setup_count,
             "show_retired": show_retired,
         },
     )
@@ -394,6 +413,151 @@ async def update_water_recipe(
     recipe.na = _parse_float(na)
     recipe.cl = _parse_float(cl)
     recipe.so4 = _parse_float(so4)
+    db.commit()
+
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+# ── Brew Setup routes ────────────────────────────────────────────────────────
+
+
+def _get_wizard_context(db: Session) -> dict:
+    """Fetch all active equipment for the wizard steps."""
+    return {
+        "brewers": db.query(Brewer)
+        .filter(Brewer.is_retired.is_(False))
+        .order_by(Brewer.name)
+        .all(),
+        "grinders": db.query(Grinder)
+        .filter(Grinder.is_retired.is_(False))
+        .order_by(Grinder.name)
+        .all(),
+        "papers": db.query(Paper).filter(Paper.is_retired.is_(False)).order_by(Paper.name).all(),
+        "water_recipes": db.query(WaterRecipe)
+        .filter(WaterRecipe.is_retired.is_(False))
+        .order_by(WaterRecipe.name)
+        .all(),
+    }
+
+
+@router.get("/setups/new", response_class=HTMLResponse)
+async def new_setup_wizard(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Show the brew setup assembly wizard (create mode)."""
+    ctx = _get_wizard_context(db)
+    return templates.TemplateResponse(
+        request,
+        "equipment/_setup_wizard.html",
+        {**ctx, "setup": None, "edit_mode": False},
+    )
+
+
+@router.post("/setups", response_class=HTMLResponse)
+async def create_setup(
+    request: Request,
+    name: str = Form(...),
+    brewer_id: str = Form(...),
+    grinder_id: str = Form(...),
+    paper_id: str = Form(""),
+    water_recipe_id: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Create a new brew setup from wizard form."""
+    # Resolve brew_method_id from brewer
+    brewer = db.query(Brewer).filter(Brewer.id == brewer_id).first()
+    brew_method_id = None
+    if brewer and brewer.methods:
+        brew_method_id = brewer.methods[0].id
+
+    # Fallback: use the first available method if brewer has none
+    if not brew_method_id:
+        first_method = db.query(BrewMethod).order_by(BrewMethod.name).first()
+        if first_method:
+            brew_method_id = first_method.id
+
+    if not brew_method_id:
+        # No methods exist at all — cannot create setup
+        # Redirect back to equipment page with an error scenario handled gracefully
+        return RedirectResponse(url="/equipment", status_code=303)
+
+    setup = BrewSetup(
+        name=name.strip(),
+        brewer_id=brewer_id or None,
+        grinder_id=grinder_id or None,
+        paper_id=paper_id.strip() or None,
+        water_recipe_id=water_recipe_id or None,
+        brew_method_id=brew_method_id,
+    )
+    db.add(setup)
+    db.commit()
+
+    return RedirectResponse(url="/equipment", status_code=303)
+
+
+@router.get("/setups/{setup_id}/edit", response_class=HTMLResponse)
+async def edit_setup_wizard(
+    request: Request,
+    setup_id: str,
+    db: Session = Depends(get_db),
+):
+    """Show the brew setup assembly wizard pre-filled for editing."""
+    setup = (
+        db.query(BrewSetup)
+        .options(
+            joinedload(BrewSetup.grinder),
+            joinedload(BrewSetup.brewer),
+            joinedload(BrewSetup.paper),
+            joinedload(BrewSetup.water_recipe),
+            joinedload(BrewSetup.brew_method),
+        )
+        .filter(BrewSetup.id == setup_id)
+        .first()
+    )
+    if not setup:
+        return RedirectResponse(url="/equipment", status_code=303)
+
+    ctx = _get_wizard_context(db)
+    return templates.TemplateResponse(
+        request,
+        "equipment/_setup_wizard.html",
+        {**ctx, "setup": setup, "edit_mode": True},
+    )
+
+
+@router.post("/setups/{setup_id}", response_class=HTMLResponse)
+async def update_setup(
+    request: Request,
+    setup_id: str,
+    name: str = Form(...),
+    brewer_id: str = Form(...),
+    grinder_id: str = Form(...),
+    paper_id: str = Form(""),
+    water_recipe_id: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    """Update an existing brew setup."""
+    setup = db.query(BrewSetup).filter(BrewSetup.id == setup_id).first()
+    if not setup:
+        return RedirectResponse(url="/equipment", status_code=303)
+
+    # Resolve brew_method_id from brewer
+    brewer = db.query(Brewer).filter(Brewer.id == brewer_id).first()
+    brew_method_id = setup.brew_method_id  # keep existing if unresolvable
+    if brewer and brewer.methods:
+        brew_method_id = brewer.methods[0].id
+    elif not brew_method_id:
+        first_method = db.query(BrewMethod).order_by(BrewMethod.name).first()
+        if first_method:
+            brew_method_id = first_method.id
+
+    setup.name = name.strip()
+    setup.brewer_id = brewer_id or None
+    setup.grinder_id = grinder_id or None
+    setup.paper_id = paper_id.strip() or None
+    setup.water_recipe_id = water_recipe_id or None
+    setup.brew_method_id = brew_method_id
     db.commit()
 
     return RedirectResponse(url="/equipment", status_code=303)

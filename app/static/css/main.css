@@ -1652,3 +1652,228 @@ body {
   font-size: var(--text-sm);
   margin-top: 2px;
 }
+
+/* ── Brew Setup Wizard ───────────────────────────────────────────── */
+
+/* Step indicator bar */
+.wizard-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: var(--spacing-lg) 0 var(--spacing-xl);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-secondary);
+  border: 2px solid var(--border);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  cursor: default;
+  position: relative;
+  flex-shrink: 0;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.wizard-step.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.wizard-step.done {
+  background: var(--accent-muted, color-mix(in srgb, var(--accent) 20%, transparent));
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.wizard-step-label {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.wizard-step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  min-width: 12px;
+  max-width: 40px;
+  flex-shrink: 1;
+}
+
+/* Step content panels — only .active is shown */
+.wizard-step-content {
+  display: none;
+}
+
+.wizard-step-content.active {
+  display: block;
+}
+
+.wizard-step-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.wizard-optional-label {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+/* Option cards grid */
+.wizard-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.wizard-option-card {
+  display: block;
+  padding: var(--spacing-md);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 48px;
+  position: relative;
+}
+
+.wizard-option-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.wizard-option-card:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover, var(--surface-secondary));
+}
+
+.wizard-option-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-muted, color-mix(in srgb, var(--accent) 10%, transparent));
+}
+
+.wizard-option-name {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.wizard-option-meta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Add-link below steps when no items exist */
+.wizard-add-link {
+  display: inline-block;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: var(--spacing-xs);
+}
+
+.wizard-add-link:hover {
+  text-decoration: underline;
+}
+
+/* Navigation buttons row */
+.wizard-nav {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border);
+}
+
+/* Setup summary preview card (step 5) */
+.setup-summary-preview {
+  padding: var(--spacing-md);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.setup-summary-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  font-size: var(--text-sm);
+  padding: 2px 0;
+}
+
+.setup-summary-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 60px;
+}
+
+.setup-summary-value {
+  color: var(--text-primary);
+}
+
+/* ── Brew Setup Cards (equipment index) ──────────────────────────── */
+
+.setup-card {
+  padding: var(--spacing-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.setup-card-name {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.setup-card-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.setup-card-component {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.setup-card-component::before {
+  content: "·";
+  color: var(--border);
+}
+
+.setup-card-component:first-child::before {
+  display: none;
+}
