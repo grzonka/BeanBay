@@ -1,7 +1,7 @@
 # Project State: BeanBay
 
 **Last updated:** 2026-02-23
-**Current phase:** Phase 14 — Equipment Management ✅ COMPLETE
+**Current phase:** Phase 15 — Multi-Method Brewing ✅ COMPLETE
 
 ## Project Reference
 
@@ -21,18 +21,18 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 14 of 16 (Equipment Management) — ✅ Complete
-Plan: 5 of 5 complete
-Status: Phase complete — ready for Phase 15
-Last activity: 2026-02-23 — Completed 14-05-PLAN.md (retire/restore lifecycle + brew page setup selection + 23 tests)
+Phase: 15 of 16 (Multi-Method Brewing) — ✅ Complete
+Plan: 3 of 3 complete
+Status: Phase complete — ready for Phase 16
+Last activity: 2026-02-23 — Completed 15-03-PLAN.md (multi-method tests + setup context badge in history, 210 tests)
 
-Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 62% (8/13 v0.2.0 plans)
+Progress: [███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 73% (11/15 v0.2.0 plans est.)
 
 ## Performance Metrics
 
 **Velocity:**
-  - Total plans completed: 35 (v1: 16, v0.1.0: 5, v0.1.1: 8, v0.2.0: 6)
-  - Total phases completed: 14 complete, 15 pending
+  - Total plans completed: 38 (v1: 16, v0.1.0: 5, v0.1.1: 8, v0.2.0: 9)
+  - Total phases completed: 15 complete, 16 pending
   - All milestones shipped same day (Feb 22, 2026)
 
 ## Accumulated Context
@@ -56,6 +56,12 @@ See: .planning/PROJECT.md (Key Decisions table — 22 decisions tracked)
 - **active_setup_id cookie:** Same pattern as active_bean_id; 1-year expiry; cleared if setup is retired
 - **Setup is context for brew page:** Brew action buttons require a bean but setup is optional (for future BayBE integration)
 
+### Phase 15 Key Decisions
+- **Campaign key format `bean__method__setup`:** Double-underscore separator avoids collisions with bean IDs that may contain underscores
+- **Pour-over param set:** Adds `preinfusion_pct`, `target_yield`, `saturation` (all continuous, ranges tuned for V60-style brewing)
+- **Legacy migration at startup:** `migrate_legacy_campaigns()` runs in `main.py` lifespan, transparently maps old `{bean_id}` keys to `{bean_id}__espresso__None`
+- **brew_setup_name in shot dict:** Template has no ORM access, so `brew_setup_name` added as plain key to shot dicts in `_build_shot_dicts()` (not ORM relationship access)
+
 ### Quick Tasks Completed
 
 | ID | Task | Date |
@@ -66,13 +72,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22 decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-23
-- **What happened:** Executed Phase 14 Plan 05 (final plan). Added retire/restore lifecycle for all 5 equipment types with cascade, brew page two-panel layout with setup+bean selection (cookie-persisted), and 23 new tests (193/193 passing).
-- **Where we left off:** Phase 14 complete (5/5 plans done). Ready for Phase 15.
+- **What happened:** Executed Phase 15 (3/3 plans). Campaign key scoped to bean+method+setup, pour-over param set, brew_setup_id recorded on Measurement, setup context badge in history. 210/210 tests passing.
+- **Where we left off:** Phase 15 complete (3/3 plans done). Ready for Phase 16.
 
 ### Next Steps
-1. Execute Phase 15 (Bean bags and coffee identity)
-2. Continue to Phase 16 (BayBE intelligence integration)
+1. Plan Phase 16 (Cross-Brew Transfer Learning)
+2. Execute Phase 16 plans
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-23 — Phase 14 complete (5/5 plans, retire/restore lifecycle, brew page setup selection, 193 tests)*
+*Last updated: 2026-02-23 — Phase 15 complete (3/3 plans, campaign_key by bean+method+setup, pour-over params, 210 tests)*
