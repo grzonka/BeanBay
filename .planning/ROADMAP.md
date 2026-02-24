@@ -127,10 +127,11 @@ Plans:
 - `derive_tier(brewer)` utility function for UX tier labels (Tier 1-5, derived not stored)
 - Existing brewers default to `temp_control_type="pid"`, all others at `none`/`fixed`/`false`
 
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD — to be created by /gsd-plan-phase
+- [ ] 18-01-PLAN.md — Brewer model extension + Alembic migration + derive_tier() utility + tests
+- [ ] 18-02-PLAN.md — Route updates + form progressive disclosure + tier badge + CRUD tests
 
 **Success Criteria:**
 1. Brewer model has all capability columns with appropriate defaults
