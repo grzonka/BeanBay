@@ -1,7 +1,7 @@
 # Project State: BeanBay
 
 **Last updated:** 2026-02-24
-**Current phase:** Phase 22 — Frontend Modernization daisyUI (in progress, 22-02 complete)
+**Current phase:** Phase 22 — Frontend Modernization daisyUI (in progress, 22-04 complete)
 
 ## Project Reference
 
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 17+18+22 in progress (Wave 1 — all independent)
-Plan: 17-01 ✅, 17-02 ✅, 18-01 ✅, 22-01 ✅, 22-02 ✅ — 5 plans complete across wave
-Status: Phase 17 Plan 03 remains (test fixture updates); Phase 18 Plan 02 complete; Phase 22 Plan 03 ready (history/shots templates)
-Last activity: 2026-02-24 — Completed 22-02-PLAN.md (11 beans/ + brew/ templates restyled with daisyUI, zero inline styles)
+Phase: 17+18+22 in progress (Wave 2 — all independent)
+Plan: 17-01 ✅, 17-02 ✅, 18-01 ✅, 22-01 ✅, 22-02 ✅, 22-04 ✅ — 6 plans complete across waves
+Status: Phase 17 Plan 03 remains (test fixture updates); Phase 22 Plan 05+ ready (brew/equipment/analytics templates)
+Last activity: 2026-02-24 — Completed 22-04-PLAN.md (6 history/ templates restyled with daisyUI collapse, cards, modal)
 
-Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~10% (5/~18 v0.3.0 plans)
+Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~11% (6/~18 v0.3.0 plans)
 
 ## Performance Metrics
 
@@ -90,6 +90,12 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **TYPE_CHECKING guard for Bean/Session imports in optimizer.py:** Avoids circular import at module load time; type hints only, not runtime
 - **None return when no training data:** Even with matching similar_beans, if no actual DB measurements exist for those beans, returns None gracefully
 
+### Phase 22 Plan 04 Key Decisions
+- **daisyUI collapse (checkbox-based) replaces JS classList toggle:** Filter panel collapses/expands with zero JavaScript
+- **modal-backdrop form[method=dialog]:** Enables click-outside-to-close natively via HTML dialog API
+- **Custom CSS classes preserved alongside daisyUI:** recipe-params, flavor-bar, flavor-slider-row, .touched from input.css stay intact
+- **Dynamic flavor-bar-fill width as inline style:** Required runtime percentage value; cannot be a Tailwind class
+
 ### Phase 22 Plan 02 Key Decisions
 - **`empty-state` stays as `id=`:** Used by `list.html`'s JavaScript `querySelector('#empty-state')` — NOT a CSS class; visual styling via Tailwind utilities
 - **`_recipe_card.html` left unchanged:** All `recipe-params`/`recipe-param`/etc. already correct via `input.css @layer components`
@@ -121,15 +127,14 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-24
-- **What happened:** Executed Phase 22 Plan 02. Restyled all 11 beans/ and brew/ templates with daisyUI components (cards, form-control, badge-primary/ghost, btn classes) and Tailwind utility classes. Replaced all custom CSS classes and inline styles. Preserved all custom @layer component classes (recipe-params, score-slider, flavor-slider, param-input-row, etc.), all hx-* attributes, Jinja2 logic, and JavaScript handlers.
-- **Where we left off:** Phase 22 Plan 02 complete. Next: Phase 22 Plan 03 (history/shots templates) or Phase 17 Plan 03.
+- **What happened:** Executed Phase 22 Plan 04. Restyled all 6 history/ templates: index.html with daisyUI collapse filter panel and modal pattern; _shot_row.html as card bg-base-200 cards; _filter_panel.html with select select-bordered; _shot_modal.html with daisyUI badges and custom CSS preserved; _shot_edit.html with daisyUI form controls preserving flavor-slider and tag input behavior.
+- **Where we left off:** Phase 22 Plan 04 complete. Next: Phase 22 Plan 05+ (brew/equipment/analytics templates) or Phase 17 Plan 03.
 
 ### Next Steps
-1. Execute Phase 22 Plan 03 — history/shots templates with daisyUI (22-03-PLAN.md)
+1. Execute Phase 22 Plan 05+ — brew, equipment, analytics templates with daisyUI
 2. Execute Phase 17 Plan 03 — test fixture updates + new migration tests (17-03-PLAN.md)
-3. Execute Phase 22 Plan 04+ — equipment, analytics templates
-4. Wave 1 phases (17, 18, 22) are independent — can continue in any order
+3. Wave 1/2 phases (17, 18, 22) are independent — can continue in any order
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-24 — Completed 22-02 (11 beans/ + brew/ templates restyled with daisyUI, zero inline styles)*
+*Last updated: 2026-02-24 — Completed 22-04 (6 history/ templates → daisyUI collapse, cards, modal, form controls)*
