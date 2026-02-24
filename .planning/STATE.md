@@ -142,15 +142,14 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-24
-- **What happened:** Completed Phase 17 (Campaign Storage Migration). Plan 17-03: updated conftest.py with session_factory-based optimizer_service fixture; updated test_optimizer.py with DB assertions instead of file checks; updated test_brew.py with PendingRecommendation DB seeding instead of app.state dict; updated test_brew_multimethod.py with standalone migrate_legacy_campaign_files() and session factory; created test_migration.py with 11 new migration tests using per-test ephemeral SQLite for isolation. Fixed critical test isolation bug where migration functions' session.commit()/close() broke rollback isolation. 278 tests pass, 6 pre-existing failures only.
-- **Where we left off:** Phase 17 complete. Phase 22 Plan 06 and Phase 18 Plan 02 are next candidates.
+- **What happened:** Fixed 3 remaining test failures from Phase 17 gap closure. `test_transfer_learning_integration.py` tests were asserting on `_campaigns_dir .transfer` file existence, but Phase 17-02 removed `_campaigns_dir` and moved transfer metadata to `CampaignState.transfer_metadata` DB column. Updated 3 tests to use `optimizer_service.get_transfer_metadata(campaign_key)` instead. Also confirmed 3 history tests were already fixed during Phase 22 work. 284 tests pass, 0 failures.
+- **Where we left off:** Phase 17 fully complete (284/284 tests passing). Phase 22 Plan 06 and Phase 18 Plan 02 are next candidates.
 
 ### Next Steps
 1. Execute Phase 22 Plan 06 — remaining templates + cleanup with daisyUI
 2. Execute Phase 18 Plan 02 — Brewer capability route updates + form progressive disclosure
-3. Fix 3 test_transfer_learning_integration.py failures (update to use DB-based transfer metadata assertions)
-4. Wave 1/2 phases (18, 22) are independent — can continue in any order
+3. Wave 1/2 phases (18, 22) are independent — can continue in any order
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-24 — Phase 17 COMPLETE (Campaign Storage Migration — 3 plans, 8 commits, 278 tests passing)*
+*Last updated: 2026-02-24 — Phase 17 gap closure complete (284/284 tests passing, 0 failures)*
