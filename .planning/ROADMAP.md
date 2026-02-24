@@ -91,7 +91,7 @@ Wave 3: Phases 20, 21 (parallel — both depend on 19)
 **Plans:** 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — New models (CampaignState, PendingRecommendation) + migration service
+- [x] 17-01-PLAN.md — New models (CampaignState, PendingRecommendation) + migration service
 - [ ] 17-02-PLAN.md — OptimizerService + brew.py + lifespan refactor to DB-backed storage
 - [ ] 17-03-PLAN.md — Test fixture updates + test assertions + new migration tests
 
@@ -338,7 +338,7 @@ Wave 3 (parallel):                  20 (Espresso)  21 (New Methods)
 | 14 | v0.2.0 | 5/5 | Complete | 2026-02-23 |
 | 15 | v0.2.0 | 3/3 | Complete | 2026-02-23 |
 | 16 | v0.2.0 | 2/2 | Complete | 2026-02-23 |
-| 17 | v0.3.0 | 0/3 | Planned | — |
+| 17 | v0.3.0 | 1/3 | In Progress | — |
 | 18 | v0.3.0 | 0/? | Planned | — |
 | 19 | v0.3.0 | 0/? | Planned | — |
 | 20 | v0.3.0 | 0/? | Planned | — |

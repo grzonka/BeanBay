@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 17 of 22 (Campaign Storage Migration) — planned, not started
-Plan: 0 of ? — phase not yet plan-detailed
-Status: v0.3.0 roadmap complete, awaiting phase planning (/gsd-plan-phase)
-Last activity: 2026-02-24 — v0.3.0 roadmap finalized
+Phase: 17 of 22 (Campaign Storage Migration) — in progress
+Plan: 1 of 3 complete — 17-01-PLAN.md done
+Status: Phase 17 in progress — Plan 01 complete, Plans 02 and 03 remain
+Last activity: 2026-02-24 — Completed 17-01-PLAN.md (CampaignState + PendingRecommendation models + migration service)
 
-Progress: [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0% (0/? v0.3.0 plans)
+Progress: [█░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 2% (1/11 v0.3.0 plans)
 
 ## Performance Metrics
 
@@ -72,6 +72,12 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **Legacy migration at startup:** `migrate_legacy_campaigns()` runs in `main.py` lifespan, transparently maps old `{bean_id}` keys to `{bean_id}__espresso__None`
 - **brew_setup_name in shot dict:** Template has no ORM access, so `brew_setup_name` added as plain key to shot dicts in `_build_shot_dicts()` (not ORM relationship access)
 
+### Phase 17 Plan 01 Key Decisions
+- **campaign_json as opaque Text blob:** BayBE Campaign.to_json() output stored as raw Text, not decomposed. BayBE controls its own serialization format.
+- **Migration functions accept session_factory as argument:** Not importing SessionLocal directly — enables testability with in-memory SQLite (same pattern OptimizerService will use in Plan 02).
+- **Idempotency via check-before-insert:** Simple query before each insert, skip if row exists. Clear, auditable. No UPSERT complexity needed for a once-per-startup migration.
+- **Original files left as backup after migration:** migrate_campaigns_to_db() and migrate_pending_to_db() do NOT delete the source files. Cleanup is manual after confirming successful migration.
+
 ### Phase 16 Key Decisions
 - **Transfer metadata as .transfer sidecar file:** Consistent with .bounds sidecar pattern; easy presence-check without loading campaign
 - **transfer_metadata stored in pending recommendation dict:** Survives server restarts; show_recommendation reads metadata without extra optimizer call
@@ -95,14 +101,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-24
-- **What happened:** Finalized v0.3.0 roadmap (6 phases, 17-22). Completed comprehensive research (espresso capabilities, brewing parameters, architecture, stack, pitfalls). Cleaned up ROADMAP.md, STATE.md, PROJECT.md. v0.3.0 ready for phase planning.
-- **Where we left off:** v0.3.0 roadmap complete. Next: plan Phase 17 (Campaign Storage Migration) or Phase 18 (Brewer Capability Model) or Phase 22 (Frontend daisyUI) — all three are Wave 1 (independent, can be planned in any order).
+- **What happened:** Executed Phase 17 Plan 01. Created CampaignState and PendingRecommendation SQLAlchemy models. Created migrate_campaigns_to_db() and migrate_pending_to_db() idempotent migration functions. All 240 tests pass.
+- **Where we left off:** Phase 17 Plan 01 complete. Next: Plan 02 (OptimizerService + brew.py + lifespan refactor to DB-backed storage).
 
 ### Next Steps
-1. Plan Phase 17 (Campaign Storage Migration) — `/gsd-plan-phase 17`
-2. Plan Phase 18 (Brewer Capability Model) — `/gsd-plan-phase 18`
-3. Plan Phase 22 (Frontend daisyUI) — `/gsd-plan-phase 22`
-4. Wave 1 phases are independent — plan and execute in any order or parallel
+1. Execute Phase 17 Plan 02 — OptimizerService + brew.py refactor to use DB (17-02-PLAN.md)
+2. Execute Phase 17 Plan 03 — test fixture updates + new migration tests (17-03-PLAN.md)
+3. After Phase 17: Continue v0.3.0 Wave 1 (Phase 18 or 22 — both independent)
 
 ---
 *State initialized: 2026-02-21*
