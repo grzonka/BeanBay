@@ -45,9 +45,9 @@
             >
             <div class="wizard-option-name">{{ brewer.name }}</div>
             {% if brewer.methods %}
-              <div class="method-tags mt-1">
+              <div class="flex flex-wrap gap-1 mt-1">
                 {% for method in brewer.methods %}
-                  <span class="method-tag">{{ method.name }}</span>
+                  <span class="badge badge-ghost">{{ method.name }}</span>
                 {% endfor %}
               </div>
             {% else %}

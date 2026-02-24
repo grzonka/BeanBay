@@ -196,7 +196,8 @@ def test_history_shots_partial_htmx(client, sample_bean, db_session):
     assert "<!DOCTYPE html>" not in response.text
     assert "BeanBay" not in response.text
     # But should include the shot row
-    assert "shot-row" in response.text
+    assert "shot-" in response.text  # shot rows have id="shot-{id}"
+    assert "cursor-pointer" in response.text
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +341,7 @@ def test_history_shows_manual_badge(client, sample_bean, db_session):
 
     response = client.get("/history")
     assert response.status_code == 200
-    assert "badge-manual" in response.text
+    assert "badge badge-ghost badge-sm" in response.text  # manual badge uses badge-ghost
     assert "Manual" in response.text
 
 
@@ -350,7 +351,7 @@ def test_history_manual_badge_not_shown_for_regular(client, sample_bean, db_sess
 
     response = client.get("/history")
     assert response.status_code == 200
-    assert "badge-manual" not in response.text
+    assert "Manual" not in response.text
 
 
 def test_shot_detail_shows_manual_badge(client, sample_bean, db_session):
@@ -359,7 +360,7 @@ def test_shot_detail_shows_manual_badge(client, sample_bean, db_session):
 
     response = client.get(f"/history/{shot.id}")
     assert response.status_code == 200
-    assert "badge-manual" in response.text
+    assert "badge badge-ghost" in response.text  # manual badge uses badge-ghost
     assert "Manual" in response.text
 
 

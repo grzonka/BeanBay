@@ -166,8 +166,8 @@
           {% set current_min = param_override.get('min', '') if param_override else '' %}
           {% set current_max = param_override.get('max', '') if param_override else '' %}
 
-          <div class="range-row">
-            <span class="range-label">
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <span class="col-span-2 text-sm text-base-content/60 font-medium">
               {{ param | replace('_', ' ') | title }}
               <span class="text-base-content/40">(default: {{ bounds[0] }}–{{ bounds[1] }})</span>
             </span>
@@ -191,7 +191,7 @@
                 step="any"
               >
             </div>
-          </div>
+          </div><!-- /grid -->
         {% endfor %}
 
         <button type="submit" class="btn btn-ghost w-full min-h-12 mt-4">Save Ranges</button>

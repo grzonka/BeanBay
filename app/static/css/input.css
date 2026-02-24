@@ -304,6 +304,14 @@
     display: block;
   }
 
+  /* Collapsible toggle — hidden by default, shown when .open added via JS */
+  .collapsible-content {
+    display: none;
+  }
+  .collapsible-content.open {
+    display: block;
+  }
+
   /* Param input row — slider + number pairs for manual brew */
   .param-input-row {
     display: flex;
