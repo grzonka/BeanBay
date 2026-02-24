@@ -1,3 +1,23 @@
+# Stage 0: CSS Builder (Tailwind standalone — no Node.js)
+FROM debian:bookworm-slim AS css-builder
+WORKDIR /build
+
+# Download Tailwind standalone CLI + daisyUI plugin files
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
+    curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 && \
+    chmod +x tailwindcss-linux-x64 && \
+    curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui.mjs && \
+    curl -sLO https://github.com/saadeghi/daisyui/releases/latest/download/daisyui-theme.mjs && \
+    apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+# Copy templates + input CSS (for class scanning)
+COPY app/templates/ ./app/templates/
+COPY app/static/css/input.css ./app/static/css/input.css
+
+# Build CSS — place daisyui.mjs alongside input.css for @plugin reference
+RUN cp daisyui.mjs daisyui-theme.mjs app/static/css/ && \
+    ./tailwindcss-linux-x64 -i app/static/css/input.css -o app/static/css/main.css --minify
+
 # Stage 1: Builder
 FROM python:3.11-slim AS builder
 WORKDIR /build
@@ -26,6 +46,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY app/ ./app/
 COPY alembic.ini ./
 COPY migrations/ ./migrations/
+
+# Copy compiled CSS from CSS builder (overwrites placeholder in app/static/css/)
+COPY --from=css-builder /build/app/static/css/main.css ./app/static/css/main.css
 
 # Environment
 LABEL org.opencontainers.image.source="https://github.com/grzonka/beanbay"
