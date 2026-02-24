@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 17+18 in progress (Wave 1 — both independent)
-Plan: 17-01 ✅, 18-01 ✅ — multiple plans complete across wave
-Status: Phase 17 Plans 02+03 remain; Phase 18 Plan 02 ready
-Last activity: 2026-02-24 — Completed 18-01-PLAN.md (Brewer capability model, migration, derive_tier, 27 tests)
+Phase: 17+18+22 in progress (Wave 1 — all independent)
+Plan: 17-01 ✅, 18-01 ✅, 22-01 ✅ — 3 plans complete across wave
+Status: Phase 17 Plans 02+03 remain; Phase 18 Plan 02 ready; Phase 22 Plan 02 ready
+Last activity: 2026-02-24 — Completed 22-01-PLAN.md (Tailwind+daisyUI infra, base.html drawer layout, Dockerfile CSS stage)
 
-Progress: [██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~4% (2/11 v0.3.0 plans)
+Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~6% (3/~18 v0.3.0 plans)
 
 ## Performance Metrics
 
@@ -84,6 +84,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **TYPE_CHECKING guard for Bean/Session imports in optimizer.py:** Avoids circular import at module load time; type hints only, not runtime
 - **None return when no training data:** Even with matching similar_beans, if no actual DB measurements exist for those beans, returns None gracefully
 
+### Phase 22 Plan 01 Key Decisions
+- **Tailwind standalone CLI (no Node.js):** Downloaded binary in Docker Stage 0 — no npm, no package.json, clean minimal build
+- **@plugin ./daisyui.mjs:** daisyUI v5 loaded as standalone .mjs plugin placed alongside input.css at compile time
+- **Checkbox drawer replaces JS toggle:** `input[type=checkbox].drawer-toggle` + `label[for=drawer-toggle]` pattern is pure CSS; entire JS IIFE removed from base.html
+- **lg:drawer-open:** Desktop permanent sidebar via Tailwind modifier; zero JS needed at any viewport
+- **main.css gitignored:** Build artifact generated from input.css; custom component classes kept in @layer components
+
 ### Quick Tasks Completed
 
 | ID | Task | Date |
@@ -101,15 +108,16 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-24
-- **What happened:** Executed Phase 18 Plan 01. Extended Brewer model with 13 capability columns (temp, preinfusion, pressure, flow, bloom, stop_mode). Created idempotent Alembic migration 4500e5aafecb. Created app/utils/brewer_capabilities.py with derive_tier() (5-tier UX system). Added 27 tests (all pass, 267 total passing).
-- **Where we left off:** Phase 18 Plan 01 complete. Phase 17 Plan 01 also complete (from a prior session). Next: continue Phase 17 (02+03) or Phase 18 Plan 02 (Brewer routes/UI).
+- **What happened:** Executed Phase 22 Plan 01. Created app/static/css/input.css with Tailwind v4 + daisyUI v5 config and all custom component layers. Rewrote base.html with daisyUI drawer (coffee theme, checkbox-based, no JS, lg:drawer-open desktop sidebar). Added 3-stage Docker build with css-builder stage (Tailwind standalone CLI). Created Makefile with css/css-watch targets.
+- **Where we left off:** Phase 22 Plan 01 complete. Phase 17 Plan 01 and Phase 18 Plan 01 also complete. Next: continue Phase 17 (02+03), Phase 18 Plan 02, or Phase 22 Plan 02 (beans templates).
 
 ### Next Steps
 1. Execute Phase 17 Plan 02 — OptimizerService + brew.py refactor to use DB (17-02-PLAN.md)
 2. Execute Phase 17 Plan 03 — test fixture updates + new migration tests (17-03-PLAN.md)
 3. Execute Phase 18 Plan 02 — Brewer routes + UI with capability form fields (18-02-PLAN.md)
-4. Wave 1 phases (17, 18, 22) are independent — can execute in any order
+4. Execute Phase 22 Plan 02 — Beans templates with daisyUI (22-02-PLAN.md)
+5. Wave 1 phases (17, 18, 22) are independent — can execute in any order
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-24 — Completed 18-01 (Brewer capability model + derive_tier)*
+*Last updated: 2026-02-24 — Completed 22-01 (Tailwind+daisyUI infra, base.html drawer, Dockerfile CSS stage)*
