@@ -1,0 +1,341 @@
+@import "tailwindcss";
+@plugin "./daisyui.mjs";
+
+/* ── Custom components with no daisyUI equivalent ────────────── */
+@layer components {
+
+  /* Recipe parameter grid — 2-col grid for brew recipe display */
+  .recipe-params {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .recipe-param {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    background: oklch(20% 0.015 55);
+    border: 1px solid oklch(30% 0.02 55);
+    border-radius: 0.625rem;
+    padding: 1rem;
+  }
+
+  /* Recipe value — large readable numbers for arm's-length viewing */
+  .recipe-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .recipe-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    opacity: 0.7;
+    margin-left: 2px;
+  }
+
+  .recipe-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.7;
+  }
+
+  /* Brew ratio display */
+  .ratio {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: oklch(20% 0.015 55);
+    border: 1px solid oklch(30% 0.02 55);
+    border-radius: 0.625rem;
+    padding: 0.5rem 1rem;
+    margin-top: 0.5rem;
+  }
+
+  /* Flavor slider grid — 3-column: label | slider | value */
+  .flavor-slider-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 30px;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+  }
+
+  /* Flavor bar display (read-only in shot detail) */
+  .flavor-display-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 30px;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .flavor-bar {
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .flavor-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+
+  /* Score slider — custom webkit/moz thumb for taste rating */
+  .score-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    min-height: 8px;
+    padding: 0;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .score-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  .score-slider::-moz-range-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Flavor slider — smaller thumb, untouched = faded */
+  .flavor-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+
+  .flavor-slider.touched { opacity: 1; }
+
+  .flavor-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .flavor-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* Chart container — fixed height for Chart.js canvases */
+  .chart-container {
+    position: relative;
+    height: 280px;
+    width: 100%;
+  }
+
+  @media (min-width: 480px) {
+    .chart-container { height: 340px; }
+  }
+
+  /* Stats grid — 2-col for analytics stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  /* Mineral grid — 2-col mobile, 3-col 480px+ */
+  .mineral-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 480px) {
+    .mineral-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* Wizard steps indicator — horizontal step circles + connectors */
+  .wizard-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 1.5rem 0 2rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .wizard-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid oklch(30% 0.02 55);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: default;
+    position: relative;
+    flex-shrink: 0;
+    justify-content: center;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+  }
+
+  .wizard-step.active {
+    border-color: oklch(72% 0.123 63);
+    color: #fff;
+  }
+
+  .wizard-step.done {
+    border-color: oklch(72% 0.123 63);
+  }
+
+  .wizard-step-label {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .wizard-step-connector {
+    flex: 1;
+    height: 2px;
+    min-width: 12px;
+    max-width: 40px;
+    flex-shrink: 1;
+  }
+
+  /* Wizard option cards — radio-card selection pattern */
+  .wizard-option-card {
+    display: block;
+    padding: 1rem;
+    border: 2px solid oklch(30% 0.02 55);
+    border-radius: 0.625rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    min-height: 48px;
+    position: relative;
+  }
+
+  .wizard-option-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .wizard-option-card:hover {
+    border-color: oklch(72% 0.123 63);
+  }
+
+  .wizard-option-card.selected {
+    border-color: oklch(72% 0.123 63);
+  }
+
+  /* Comparison list — bean comparison cards for analytics */
+  .comparison-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .comparison-bean {
+    border: 1px solid oklch(30% 0.02 55);
+    border-radius: 0.625rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* Recipe param grid — 3-col for comparison table */
+  .recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  /* Taste-group untouched opacity pattern */
+  #taste-group {
+    opacity: 0.4;
+    transition: opacity 0.2s;
+  }
+  #taste-group.touched {
+    opacity: 1;
+  }
+
+  .taste-required-msg {
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: none;
+  }
+  .taste-required-msg.visible {
+    display: block;
+  }
+
+  /* Param input row — slider + number pairs for manual brew */
+  .param-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .param-slider {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .param-number {
+    width: 80px;
+    flex-shrink: 0;
+    text-align: center;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid oklch(30% 0.02 55);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+  }
+}
+
+/* ── htmx loading indicator ──────────────────────────────────── */
+@layer utilities {
+  .htmx-indicator {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .htmx-request .htmx-indicator,
+  .htmx-request.htmx-indicator {
+    opacity: 1;
+  }
+}
