@@ -1,7 +1,7 @@
 # Project State: BeanBay
 
 **Last updated:** 2026-02-24
-**Current phase:** Phase 17 — Campaign Storage Migration (in progress, 17-02 complete)
+**Current phase:** Phase 22 — Frontend Modernization daisyUI (in progress, 22-02 complete)
 
 ## Project Reference
 
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 17+18+22 in progress (Wave 1 — all independent)
-Plan: 17-01 ✅, 17-02 ✅, 18-01 ✅, 22-01 ✅ — 4 plans complete across wave
-Status: Phase 17 Plan 03 remains (test fixture updates); Phase 18 Plan 02 ready; Phase 22 Plan 02 ready
-Last activity: 2026-02-24 — Completed 17-02-PLAN.md (OptimizerService + brew.py + main.py + migration.py refactored to DB-backed storage)
+Plan: 17-01 ✅, 17-02 ✅, 18-01 ✅, 22-01 ✅, 22-02 ✅ — 5 plans complete across wave
+Status: Phase 17 Plan 03 remains (test fixture updates); Phase 18 Plan 02 complete; Phase 22 Plan 03 ready (history/shots templates)
+Last activity: 2026-02-24 — Completed 22-02-PLAN.md (11 beans/ + brew/ templates restyled with daisyUI, zero inline styles)
 
-Progress: [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~8% (4/~18 v0.3.0 plans)
+Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~10% (5/~18 v0.3.0 plans)
 
 ## Performance Metrics
 
@@ -90,6 +90,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **TYPE_CHECKING guard for Bean/Session imports in optimizer.py:** Avoids circular import at module load time; type hints only, not runtime
 - **None return when no training data:** Even with matching similar_beans, if no actual DB measurements exist for those beans, returns None gracefully
 
+### Phase 22 Plan 02 Key Decisions
+- **`empty-state` stays as `id=`:** Used by `list.html`'s JavaScript `querySelector('#empty-state')` — NOT a CSS class; visual styling via Tailwind utilities
+- **`_recipe_card.html` left unchanged:** All `recipe-params`/`recipe-param`/etc. already correct via `input.css @layer components`
+- **`.touched` opacity pattern preserved:** Flavor sliders start at opacity 0.4 → 1 on interaction; driven by `input.css @layer components`; `oninput` JS preserved verbatim
+- **Insight badge arbitrary colors:** `bg-sky-900/50 text-sky-300` (random), `bg-emerald-900/50 text-emerald-300` (bayesian_early), `bg-amber-900/50 text-amber-300` (bayesian)
+- **Large brew action buttons:** `min-h-16 rounded-xl` for primary brew actions (phone-at-machine UX); `min-h-12` for standard form submits
+
 ### Phase 22 Plan 01 Key Decisions
 - **Tailwind standalone CLI (no Node.js):** Downloaded binary in Docker Stage 0 — no npm, no package.json, clean minimal build
 - **@plugin ./daisyui.mjs:** daisyUI v5 loaded as standalone .mjs plugin placed alongside input.css at compile time
@@ -114,15 +121,15 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-24
-- **What happened:** Executed Phase 17 Plan 02. Refactored OptimizerService from file I/O to DB-backed persistence using CampaignState model. Updated brew.py pending helpers to use PendingRecommendation model. Updated lifespan in main.py to wire DB-backed architecture (migrate legacy files → migrate campaigns → migrate pending → OptimizerService(SessionLocal)). Added migrate_legacy_campaign_files() to migration.py, fixed session pattern bug (with→try/finally/close).
-- **Where we left off:** Phase 17 Plan 02 complete. Next: Phase 17 Plan 03 (test fixture updates) or Phase 18/22 Plan 02s.
+- **What happened:** Executed Phase 22 Plan 02. Restyled all 11 beans/ and brew/ templates with daisyUI components (cards, form-control, badge-primary/ghost, btn classes) and Tailwind utility classes. Replaced all custom CSS classes and inline styles. Preserved all custom @layer component classes (recipe-params, score-slider, flavor-slider, param-input-row, etc.), all hx-* attributes, Jinja2 logic, and JavaScript handlers.
+- **Where we left off:** Phase 22 Plan 02 complete. Next: Phase 22 Plan 03 (history/shots templates) or Phase 17 Plan 03.
 
 ### Next Steps
-1. Execute Phase 17 Plan 03 — test fixture updates + new migration tests (17-03-PLAN.md)
-2. Execute Phase 18 Plan 02 — Brewer routes + UI with capability form fields (18-02-PLAN.md)
-3. Execute Phase 22 Plan 02 — Beans templates with daisyUI (22-02-PLAN.md)
-4. Wave 1 phases (17, 18, 22) are independent — can execute in any order
+1. Execute Phase 22 Plan 03 — history/shots templates with daisyUI (22-03-PLAN.md)
+2. Execute Phase 17 Plan 03 — test fixture updates + new migration tests (17-03-PLAN.md)
+3. Execute Phase 22 Plan 04+ — equipment, analytics templates
+4. Wave 1 phases (17, 18, 22) are independent — can continue in any order
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-24 — Completed 17-02 (OptimizerService + brew.py + main.py + migration.py → DB-backed)*
+*Last updated: 2026-02-24 — Completed 22-02 (11 beans/ + brew/ templates restyled with daisyUI, zero inline styles)*
