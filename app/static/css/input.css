@@ -1,6 +1,53 @@
 @import "tailwindcss";
 @plugin "./daisyui.mjs" {
-  themes: coffee --default;
+  themes: espresso --default;
+}
+
+/* ── Espresso theme — tuned from original hand-rolled palette ── */
+@plugin "./daisyui-theme.mjs" {
+  name: espresso;
+  default: true;
+  color-scheme: dark;
+
+  /* Backgrounds — layered dark espresso browns */
+  --color-base-100: oklch(11% 0.015 55);    /* #1a1612 — page background */
+  --color-base-200: oklch(16% 0.018 55);    /* #2a2420 — sidebar / navbar */
+  --color-base-300: oklch(20% 0.02 55);     /* #332d28 — cards / panels */
+  --color-base-content: oklch(92% 0.02 75); /* #f0e6d8 — warm cream text */
+
+  /* Primary — amber-orange accent */
+  --color-primary: oklch(64% 0.13 55);      /* #c87941 */
+  --color-primary-content: oklch(12% 0.02 55);
+
+  /* Secondary — muted tan */
+  --color-secondary: oklch(65% 0.04 60);    /* #b0a090 */
+  --color-secondary-content: oklch(12% 0.01 55);
+
+  /* Accent — slightly brighter amber for hover states */
+  --color-accent: oklch(70% 0.14 58);       /* #e08a4a */
+  --color-accent-content: oklch(12% 0.02 55);
+
+  /* Neutral — darkest brown for inputs / badges */
+  --color-neutral: oklch(24% 0.022 55);     /* #3d3530 */
+  --color-neutral-content: oklch(70% 0.04 60);
+
+  /* Semantic */
+  --color-info: oklch(70% 0.1 220);
+  --color-info-content: oklch(12% 0.02 220);
+  --color-success: oklch(65% 0.12 150);
+  --color-success-content: oklch(12% 0.02 150);
+  --color-warning: oklch(80% 0.14 85);
+  --color-warning-content: oklch(15% 0.03 85);
+  --color-error: oklch(62% 0.2 25);
+  --color-error-content: oklch(12% 0.04 25);
+
+  /* Shape */
+  --radius-selector: 0.625rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.625rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
 }
 
 /* ── Custom components with no daisyUI equivalent ────────────── */
@@ -99,7 +146,7 @@
     border-radius: 4px;
     outline: none;
     cursor: pointer;
-    background: oklch(35% 0.03 55);
+    background: oklch(26% 0.022 55);
   }
 
   .score-slider::-webkit-slider-thumb {
@@ -109,7 +156,7 @@
     height: 32px;
     border-radius: 50%;
     cursor: pointer;
-    background: oklch(72% 0.123 63);
+    background: oklch(64% 0.13 55);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
   }
 
@@ -118,7 +165,7 @@
     height: 32px;
     border-radius: 50%;
     cursor: pointer;
-    background: oklch(72% 0.123 63);
+    background: oklch(64% 0.13 55);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
     border: none;
   }
@@ -133,7 +180,7 @@
     outline: none;
     opacity: 0.4;
     transition: opacity 0.2s;
-    background: oklch(35% 0.03 55);
+    background: oklch(26% 0.022 55);
   }
 
   .flavor-slider.touched { opacity: 1; }
@@ -145,7 +192,7 @@
     height: 24px;
     border-radius: 50%;
     cursor: pointer;
-    background: oklch(72% 0.123 63);
+    background: oklch(64% 0.13 55);
   }
 
   .flavor-slider::-moz-range-thumb {
@@ -153,7 +200,7 @@
     height: 24px;
     border-radius: 50%;
     cursor: pointer;
-    background: oklch(72% 0.123 63);
+    background: oklch(64% 0.13 55);
     border: none;
   }
 
