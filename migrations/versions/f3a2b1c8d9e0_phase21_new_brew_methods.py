@@ -75,7 +75,7 @@ def upgrade() -> None:
     # ── Seed new BrewMethod entries ───────────────────────────────────────────
     import uuid
 
-    new_methods = ["french-press", "aeropress", "turkish", "moka-pot", "cold-brew"]
+    new_methods = ["pour-over", "french-press", "aeropress", "turkish", "moka-pot", "cold-brew"]
     for method_name in new_methods:
         # Only insert if not already present (idempotent)
         existing = conn.execute(
