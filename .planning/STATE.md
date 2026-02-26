@@ -22,11 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 23-v030-pre-release-fixes (Plan 2 of 3 complete)
-Status: In progress — plan 23-02 complete (method-aware brew evaluation + welcome page)
-Last activity: 2026-02-26 — Completed 23-02-PLAN.md (brew method-awareness + onboarding welcome page)
+Phase: 23-v030-pre-release-fixes (Plan 3 of 3 complete — phase COMPLETE)
+Status: Phase 23 complete — all pre-release fixes done
+Last activity: 2026-02-26 — Completed 23-03-PLAN.md (setup wizard fix + UX polish)
 
-Progress: All 5 milestones shipped (46 plans across 22 phases) + phase 23 in progress (2/3 plans done)
+Progress: All 5 milestones shipped (46 plans across 22 phases) + phase 23 complete (3/3 plans done)
+Ready for: v0.3.0 release (git tag, Docker image, changelog)
 
 ## Performance Metrics
 
@@ -140,6 +141,12 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **TYPE_CHECKING guard for Bean/Session imports in optimizer.py:** Avoids circular import at module load time; type hints only, not runtime
 - **None return when no training data:** Even with matching similar_beans, if no actual DB measurements exist for those beans, returns None gracefully
 
+### Phase 23 Plan 03 Key Decisions
+- **Error divs per-step (`id="step-N-error"`) rather than a single floating error:** Errors anchor visually to the step they belong to; clearer UX than a generic floating message
+- **Delegated `change` listener on `wizard-form`** clears all errors on any selection change — no need to wire per-radio handlers
+- **`tojson` filter for all four JS maps (BREWERS, GRINDERS, PAPERS, WATER_RECIPES):** Prevents XSS with equipment names containing quotes or apostrophes
+- **Submit button `onclick` adds `.loading` + `disabled`:** Prevents double-submit and gives immediate visual feedback before server responds
+
 ### Phase 23 Plan 02 Key Decisions
 - **`brew_method` defaults to `'espresso'` in templates:** Safe fallback for any legacy path that lacks `method` in context
 - **Cold-brew time in minutes (max 2880), others in seconds (max 120 espresso / 1800 other):** Minutes are natural for cold-brew steeping; displaying 7200 seconds would confuse users
@@ -204,12 +211,11 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-26
-- **What happened:** Completed plan 23-02. Made brew evaluation templates method-aware (terminology + time ranges per method). Created welcome onboarding page shown to users with empty databases. 409/408 tests passing (net +1 from splitting a test).
-- **Where we left off:** Plan 23-02 complete. Plan 23-03 remaining in phase 23.
+- **What happened:** Completed plan 23-03. Fixed root-cause wizard bug (CSS show/hide missing). Replaced alert() validation with inline error divs. Polished confirmation step. Added loading state to submit. Phase 23 now complete (3/3 plans).
+- **Where we left off:** Phase 23 complete. Ready for v0.3.0 release.
 
 ### Next Steps
-1. Execute plan 23-03 (remaining pre-release fixes)
-2. v0.3.0 release (git tag, Docker image, changelog)
+1. v0.3.0 release (git tag, Docker image, changelog)
 
 ---
 *State initialized: 2026-02-21*

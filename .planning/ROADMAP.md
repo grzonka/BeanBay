@@ -7,7 +7,7 @@
 - ✅ **v0.1.1 UX Polish & Manual Brew** — Phases 10-12 (shipped 2026-02-22)
 - ✅ **v0.2.0 Multi-Method & Intelligence** — Phases 13-16 (shipped 2026-02-23)
 - ✅ **v0.3.0 Equipment Intelligence & Parameter Evolution** — Phases 17-22 (shipped 2026-02-26)
-- 🔧 **v0.3.0 Pre-Release Fixes** — Phase 23
+- 🔧 **v0.3.0 Pre-Release Fixes** — Phase 23 ✅ Complete
 
 ## Phases
 
@@ -46,15 +46,15 @@
 
 </details>
 
-### Phase 23: v0.3.0 Pre-Release Fixes
+### Phase 23: v0.3.0 Pre-Release Fixes ✅ COMPLETE
 
 **Goal:** Fix bugs and polish UX issues found during testing — setup wizard broken, method-agnostic terminology, missing history filters, welcome page, and recipe card info icons.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 23-01-PLAN.md — History setup filter + recipe card info icons
-- [ ] 23-02-PLAN.md — Method-aware brew evaluation + welcome page
-- [ ] 23-03-PLAN.md — Setup wizard bug fix + UX polish
+- [x] 23-01-PLAN.md — History setup filter + recipe card info icons
+- [x] 23-02-PLAN.md — Method-aware brew evaluation + welcome page
+- [x] 23-03-PLAN.md — Setup wizard bug fix + UX polish
 
 ---
 
@@ -75,4 +75,4 @@ Plans:
 | 20 | v0.3.0 | 3/3 | Complete | 2026-02-26 |
 | 21 | v0.3.0 | 1/1 | Complete | 2026-02-26 |
 | 22 | v0.3.0 | 6/6 | Complete | 2026-02-26 |
-| 23 | v0.3.0 Fixes | 0/3 | Planned | — |
+| 23 | v0.3.0 Fixes | 3/3 | Complete | 2026-02-26 |
