@@ -30,11 +30,39 @@ from app.services.optimizer import (
     _resolve_bounds,
     _round_value,
 )
-from app.services.parameter_registry import get_default_bounds
+from app.services.parameter_registry import (
+    PARAMETER_REGISTRY,
+    get_default_bounds,
+    get_param_columns,
+)
 from app.services.optimizer_key import make_campaign_key
 
 router = APIRouter(prefix="/brew", tags=["brew"])
 templates = Jinja2Templates(directory="app/templates")
+
+# All measurement columns that can be set from form data, keyed by param name.
+# This covers core params + all method-specific params across Phases 20 and 21.
+_MEASUREMENT_FLOAT_COLUMNS = {
+    "grind_setting",
+    "temperature",
+    "dose_in",
+    "target_yield",
+    "preinfusion_pct",
+    "preinfusion_time",
+    "preinfusion_pressure",
+    "brew_pressure",
+    "bloom_pause",
+    "flow_rate",
+    "bloom_weight",
+    "brew_volume",
+    "steep_time",
+}
+_MEASUREMENT_STR_COLUMNS = {
+    "saturation",
+    "pressure_profile",
+    "temp_profile",
+    "brew_mode",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +142,29 @@ def _get_campaign_key(bean: Bean, setup: Optional[BrewSetup]) -> str:
     method = _get_method_from_setup(setup)
     setup_id = str(setup.id) if setup else None
     return make_campaign_key(str(bean.id), method, setup_id)
+
+
+def _extract_params_from_form(method: str, form_data: dict) -> dict:
+    """Extract all parameter values from raw form data for the given method.
+
+    Returns a dict of {param_name: value} for all known measurement columns
+    that appear in the form data. Handles both float and string params.
+    Includes legacy params (preinfusion_pct, saturation) for backward compat
+    with old campaigns that still have them in their searchspace.
+    """
+    result = {}
+    for col in _MEASUREMENT_FLOAT_COLUMNS:
+        val = form_data.get(col)
+        if val is not None and val != "":
+            try:
+                result[col] = float(val)
+            except (ValueError, TypeError):
+                pass
+    for col in _MEASUREMENT_STR_COLUMNS:
+        val = form_data.get(col)
+        if val is not None and val != "":
+            result[col] = str(val)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -229,9 +280,13 @@ async def show_recommendation(
         # Recommendation not found or invalid ID → back to brew
         return RedirectResponse(url="/brew", status_code=303)
 
+    method = rec.get("method", "espresso")
     ratio = _brew_ratio(rec.get("dose_in", 0), rec.get("target_yield", 0))
     insights = rec.get("insights", {})
     transfer_metadata = rec.get("transfer_metadata")
+
+    # Pass param_defs for generic hidden input rendering in template
+    param_defs = PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
 
     return templates.TemplateResponse(
         request,
@@ -243,6 +298,8 @@ async def show_recommendation(
             "ratio": ratio,
             "insights": insights,
             "transfer_metadata": transfer_metadata,
+            "param_defs": param_defs,
+            "method": method,
         },
     )
 
@@ -250,59 +307,39 @@ async def show_recommendation(
 @router.post("/record", response_class=HTMLResponse)
 async def record_measurement(
     request: Request,
-    recommendation_id: str = Form(...),
-    grind_setting: float = Form(...),
-    temperature: float = Form(...),
-    preinfusion_pct: Optional[float] = Form(None),
-    dose_in: float = Form(...),
-    target_yield: Optional[float] = Form(None),
-    saturation: Optional[str] = Form(None),
-    bloom_weight: Optional[float] = Form(None),
-    brew_volume: Optional[float] = Form(None),
-    method: str = Form("espresso"),
-    brew_setup_id: Optional[str] = Form(None),
-    taste: float = Form(7.0),
-    extraction_time: Optional[float] = Form(None),
-    is_failed: Optional[str] = Form(None),
-    notes: Optional[str] = Form(None),
-    acidity: Optional[float] = Form(None),
-    sweetness: Optional[float] = Form(None),
-    body: Optional[float] = Form(None),
-    bitterness: Optional[float] = Form(None),
-    aroma: Optional[float] = Form(None),
-    intensity: Optional[float] = Form(None),
-    flavor_tags: Optional[str] = Form(None),
-    is_manual: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
-    """Record a measurement — saves to SQLite and BayBE campaign."""
+    """Record a measurement — saves to SQLite and BayBE campaign.
+
+    Reads all form data generically so it works for all 7 brew methods.
+    The set of recognized param columns covers core + all method-specific params.
+    """
     bean = _require_active_bean(request, db)
     if not bean:
         return RedirectResponse(url="/beans", status_code=303)
 
+    form = await request.form()
+    form_data = dict(form)
+
+    recommendation_id = form_data.get("recommendation_id", "")
+    method = str(form_data.get("method", "espresso"))
+    brew_setup_id = form_data.get("brew_setup_id") or None
+    is_manual = form_data.get("is_manual") == "true"
+    is_failed_raw = form_data.get("is_failed", "")
+    failed = is_failed_raw in ("true", "1", "on")
+
+    # Extract all recognized param values from form
+    params = _extract_params_from_form(method, form_data)
+
     # Validate manual brews against bean parameter bounds
-    if is_manual == "true":
+    if is_manual:
         bounds = _resolve_bounds(bean.parameter_overrides, method=method)
-        if method == "pour-over":
-            param_values = {
-                "grind_setting": grind_setting,
-                "temperature": temperature,
-                "bloom_weight": bloom_weight or 40.0,
-                "dose_in": dose_in,
-                "brew_volume": brew_volume or 250.0,
-            }
-        else:
-            param_values = {
-                "grind_setting": grind_setting,
-                "temperature": temperature,
-                "preinfusion_pct": preinfusion_pct or 75.0,
-                "dose_in": dose_in,
-                "target_yield": target_yield or 40.0,
-            }
         violations = []
-        for param, value in param_values.items():
+        for param, value in params.items():
             if param not in bounds:
                 continue
+            if isinstance(value, str):
+                continue  # skip categorical params
             lo, hi = bounds[param]
             if value < lo or value > hi:
                 violations.append({"param": param, "value": value, "min": lo, "max": hi})
@@ -312,26 +349,42 @@ async def record_measurement(
                 content={"error": "Parameters out of range", "violations": violations},
             )
 
-    # Auto-set taste to 1 for failed shots (choked / gusher)
-    failed = is_failed == "true" or is_failed == "1" or is_failed == "on"
+    # Taste
+    try:
+        taste = float(form_data.get("taste", 7.0))
+    except (ValueError, TypeError):
+        taste = 7.0
     if failed:
         taste = 1.0
-
-    # Clamp taste to valid range
     taste = max(1.0, min(10.0, taste))
 
     # Clamp flavor dimensions to 1-5 if provided
-    def _clamp_flavor(val: Optional[float]) -> Optional[float]:
-        if val is None:
+    def _clamp_flavor(key: str) -> Optional[float]:
+        val = form_data.get(key)
+        if val is None or val == "":
             return None
-        return max(1.0, min(5.0, val))
+        try:
+            return max(1.0, min(5.0, float(val)))
+        except (ValueError, TypeError):
+            return None
+
+    # Extraction time
+    try:
+        extraction_time_raw = form_data.get("extraction_time")
+        extraction_time = float(extraction_time_raw) if extraction_time_raw else None
+    except (ValueError, TypeError):
+        extraction_time = None
 
     # Convert comma-separated flavor_tags string to JSON list
     flavor_tags_json = None
+    flavor_tags = form_data.get("flavor_tags")
     if flavor_tags:
-        tags = [t.strip() for t in flavor_tags.split(",") if t.strip()][:10]
+        tags = [t.strip() for t in str(flavor_tags).split(",") if t.strip()][:10]
         if tags:
             flavor_tags_json = json.dumps(tags)
+
+    notes_raw = form_data.get("notes")
+    notes = notes_raw.strip() if notes_raw else None
 
     # Deduplication: skip if recommendation_id already recorded
     existing = (
@@ -341,53 +394,51 @@ async def record_measurement(
         measurement = Measurement(
             bean_id=bean.id,
             recommendation_id=recommendation_id,
-            grind_setting=grind_setting,
-            temperature=temperature,
-            preinfusion_pct=preinfusion_pct if method != "pour-over" else None,
-            dose_in=dose_in,
-            target_yield=target_yield if method != "pour-over" else None,
-            saturation=saturation if method != "pour-over" else None,
-            brew_setup_id=brew_setup_id if brew_setup_id else None,
+            # Core params (always present for any method)
+            grind_setting=params.get("grind_setting", 0.0),
+            # temperature is nullable: cold-brew has no heated water
+            temperature=params.get("temperature"),
+            dose_in=params.get("dose_in", 0.0),
+            # Espresso params
+            target_yield=params.get("target_yield"),
+            preinfusion_pct=params.get("preinfusion_pct"),
+            saturation=params.get("saturation"),
+            preinfusion_time=params.get("preinfusion_time"),
+            preinfusion_pressure=params.get("preinfusion_pressure"),
+            brew_pressure=params.get("brew_pressure"),
+            pressure_profile=params.get("pressure_profile"),
+            bloom_pause=params.get("bloom_pause"),
+            flow_rate=params.get("flow_rate"),
+            temp_profile=params.get("temp_profile"),
+            brew_mode=params.get("brew_mode"),
+            # New method params (Phase 21)
+            steep_time=params.get("steep_time"),
+            brew_volume=params.get("brew_volume"),
+            bloom_weight=params.get("bloom_weight"),
+            # Metadata
+            brew_setup_id=brew_setup_id,
             taste=taste,
-            extraction_time=extraction_time if extraction_time else None,
+            extraction_time=extraction_time,
             is_failed=failed,
-            is_manual=(is_manual == "true"),
-            notes=notes.strip() if notes else None,
-            acidity=_clamp_flavor(acidity),
-            sweetness=_clamp_flavor(sweetness),
-            body=_clamp_flavor(body),
-            bitterness=_clamp_flavor(bitterness),
-            aroma=_clamp_flavor(aroma),
-            intensity=_clamp_flavor(intensity),
+            is_manual=is_manual,
+            notes=notes,
+            acidity=_clamp_flavor("acidity"),
+            sweetness=_clamp_flavor("sweetness"),
+            body=_clamp_flavor("body"),
+            bitterness=_clamp_flavor("bitterness"),
+            aroma=_clamp_flavor("aroma"),
+            intensity=_clamp_flavor("intensity"),
             flavor_tags=flavor_tags_json,
         )
         db.add(measurement)
         db.commit()
 
-        # Also add to BayBE campaign
+        # Also add to BayBE campaign — pass all extracted params; add_measurement filters
+        # to the campaign's actual searchspace columns.
         optimizer = request.app.state.optimizer
-        campaign_key = make_campaign_key(
-            str(bean.id), method, brew_setup_id if brew_setup_id else None
-        )
-        if method == "pour-over":
-            measurement_data = {
-                "grind_setting": grind_setting,
-                "temperature": temperature,
-                "bloom_weight": bloom_weight or 40.0,
-                "dose_in": dose_in,
-                "brew_volume": brew_volume or 250.0,
-                "taste": taste,
-            }
-        else:
-            measurement_data = {
-                "grind_setting": grind_setting,
-                "temperature": temperature,
-                "preinfusion_pct": preinfusion_pct or 75.0,
-                "dose_in": dose_in,
-                "target_yield": target_yield or 40.0,
-                "saturation": saturation or "yes",
-                "taste": taste,
-            }
+        campaign_key = make_campaign_key(str(bean.id), method, brew_setup_id)
+        measurement_data = dict(params)
+        measurement_data["taste"] = taste
         optimizer.add_measurement(
             campaign_key,
             measurement_data,
@@ -438,50 +489,52 @@ async def manual_brew(request: Request, db: Session = Depends(get_db)):
 
     active_setup = _get_active_setup(request, db)
     method = _get_method_from_setup(active_setup)
+    brewer = active_setup.brewer if active_setup else None
     bounds = _resolve_bounds(bean.parameter_overrides, method=method)
     best = _best_measurement(bean.id, db)
 
+    # Get the active param columns for this method+brewer combo
+    active_param_names = get_param_columns(method, brewer)
+    # Full param_defs (for the template to render correct input types, steps, units)
+    param_defs = [
+        pdef
+        for pdef in PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
+        if pdef["name"] in active_param_names
+    ]
+
     # Pre-fill values: use best measurement if available, else midpoint of bounds
-    if best and method == "pour-over":
-        prefill = {
-            "grind_setting": best.grind_setting,
-            "temperature": best.temperature,
-            "bloom_weight": 40.0,  # pour-over params not stored on old measurements
-            "dose_in": best.dose_in,
-            "brew_volume": 250.0,
-        }
-    elif best:
-        prefill = {
-            "grind_setting": best.grind_setting,
-            "temperature": best.temperature,
-            "preinfusion_pct": best.preinfusion_pct,
-            "dose_in": best.dose_in,
-            "target_yield": best.target_yield,
-            "saturation": best.saturation,
-        }
-    elif method == "pour-over":
-        prefill = {
-            param: _round_value((lo + hi) / 2, step)
-            for (param, (lo, hi)), step in zip(
-                bounds.items(),
-                [0.5, 1.0, 1.0, 0.5, 5.0],  # grind, temp, bloom, dose, volume
-            )
-        }
+    prefill: dict = {}
+    if best:
+        # Pull values from the best measurement for all active params
+        for pdef in param_defs:
+            name = pdef["name"]
+            val = getattr(best, name, None)
+            if val is not None:
+                prefill[name] = val
+        # Phase 20: prefer preinfusion_time over preinfusion_pct for legacy measurements
+        if "preinfusion_time" in active_param_names and prefill.get("preinfusion_time") is None:
+            if best.preinfusion_pct is not None:
+                prefill["preinfusion_time"] = round(best.preinfusion_pct / 100.0 * 15.0, 1)
+        # Fill any missing active params with midpoints
+        for pdef in param_defs:
+            name = pdef["name"]
+            if name not in prefill:
+                if pdef["type"] == "continuous" and name in bounds:
+                    lo, hi = bounds[name]
+                    step = pdef.get("rounding") or 1.0
+                    prefill[name] = _round_value((lo + hi) / 2, step)
+                elif pdef["type"] == "categorical":
+                    prefill[name] = pdef["values"][0]
     else:
-        prefill = {
-            param: _round_value((lo + hi) / 2, step)
-            for (param, (lo, hi)), step in zip(
-                bounds.items(),
-                [
-                    0.5,  # grind_setting
-                    1.0,  # temperature
-                    5.0,  # preinfusion_pct
-                    0.5,  # dose_in
-                    1.0,  # target_yield
-                ],
-            )
-        }
-        prefill["saturation"] = "yes"
+        # No best measurement — use midpoints
+        for pdef in param_defs:
+            name = pdef["name"]
+            if pdef["type"] == "continuous" and name in bounds:
+                lo, hi = bounds[name]
+                step = pdef.get("rounding") or 1.0
+                prefill[name] = _round_value((lo + hi) / 2, step)
+            elif pdef["type"] == "categorical":
+                prefill[name] = pdef["values"][0]
 
     manual_session_id = str(uuid.uuid4())
     setup_id = str(active_setup.id) if active_setup else None
@@ -492,11 +545,13 @@ async def manual_brew(request: Request, db: Session = Depends(get_db)):
         {
             "active_bean": bean,
             "active_setup": active_setup,
+            "brewer": brewer,
             "method": method,
             "setup_id": setup_id,
             "bounds": bounds,
             "prefill": prefill,
             "manual_session_id": manual_session_id,
+            "param_defs": param_defs,
         },
     )
 
@@ -511,11 +566,14 @@ async def extend_ranges(
     if not bean:
         return RedirectResponse(url="/beans", status_code=303)
 
+    active_setup = _get_active_setup(request, db)
+    method = _get_method_from_setup(active_setup)
+
     form = await request.form()
     overrides = dict(bean.parameter_overrides or {})
 
-    # TODO(Phase 20): make method-aware using active setup's method
-    for param in get_default_bounds("espresso"):
+    # Extend any param whose min/max appears in the form, for the current method
+    for param in get_default_bounds(method):
         new_min = form.get(f"{param}_min")
         new_max = form.get(f"{param}_max")
         if new_min is not None or new_max is not None:
@@ -530,3 +588,4 @@ async def extend_ranges(
     db.commit()
 
     return JSONResponse(content={"status": "ok"})
+

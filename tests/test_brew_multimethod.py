@@ -193,8 +193,8 @@ def test_optimizer_pour_over_campaign_has_bloom_param(db_session):
     assert "preinfusion_pct" not in param_names
 
 
-def test_optimizer_espresso_campaign_has_saturation(db_session):
-    """OptimizerService espresso campaign includes saturation categorical parameter."""
+def test_optimizer_espresso_campaign_phase20_tier1(db_session):
+    """Phase 20: New espresso campaigns use Tier 1 params only (no legacy preinfusion_pct/saturation)."""
     from app.services.optimizer import OptimizerService
 
     def _factory():
@@ -205,8 +205,16 @@ def test_optimizer_espresso_campaign_has_saturation(db_session):
     campaign = optimizer.get_or_create_campaign(campaign_key, method="espresso")
 
     param_names = [p.name for p in campaign.searchspace.parameters]
-    assert "saturation" in param_names
-    assert "preinfusion_pct" in param_names
+    # Phase 20: legacy params excluded from new campaigns
+    assert "saturation" not in param_names, "Legacy saturation must not appear in new campaigns"
+    assert "preinfusion_pct" not in param_names, (
+        "Legacy preinfusion_pct must not appear in new campaigns"
+    )
+    # Tier 1 core params must be present
+    assert "grind_setting" in param_names
+    assert "temperature" in param_names
+    assert "dose_in" in param_names
+    assert "target_yield" in param_names
     # Espresso should NOT have pour-over-only params
     assert "bloom_weight" not in param_names
     assert "brew_volume" not in param_names

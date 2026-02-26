@@ -35,8 +35,15 @@ from app.services.parameter_registry import (
     get_rounding_rules,
 )
 
-# Backward-compat re-exports (will be removed when routers migrate to parameter_registry)
-BAYBE_PARAM_COLUMNS = get_param_columns("espresso")
+# ---------------------------------------------------------------------------
+# Backward-compat re-exports
+# These constants reflect the NEW (Phase 20) parameter sets.
+# Existing serialised campaigns that include legacy params (preinfusion_pct,
+# saturation) continue to work via Campaign.from_json() which deserialises
+# the stored searchspace JSON; these constants are only used for creating
+# NEW campaigns and filtering measurements to BayBE columns.
+# ---------------------------------------------------------------------------
+BAYBE_PARAM_COLUMNS = get_param_columns("espresso")  # Tier 1: 4 params
 POUR_OVER_PARAM_COLUMNS = get_param_columns("pour-over")
 DEFAULT_BOUNDS = get_default_bounds("espresso")
 POUR_OVER_DEFAULT_BOUNDS = get_default_bounds("pour-over")

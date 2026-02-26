@@ -817,9 +817,9 @@ def test_manual_form_has_range_data_attributes(active_client, sample_bean):
     # data-min and data-max should appear for each parameter number input
     assert 'data-min="15' in html or 'data-min="15.0' in html  # grind_setting default min
     assert 'data-max="25' in html or 'data-max="25.0' in html  # grind_setting default max
+    # Phase 20 Tier-1 active params (preinfusion_pct is legacy — excluded from new campaigns)
     assert 'data-param="grind_setting"' in html
     assert 'data-param="temperature"' in html
-    assert 'data-param="preinfusion_pct"' in html
     assert 'data-param="dose_in"' in html
     assert 'data-param="target_yield"' in html
     # Number inputs should NOT have min/max HTML attributes on param-number inputs

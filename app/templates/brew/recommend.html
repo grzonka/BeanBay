@@ -39,15 +39,26 @@
       <input type="hidden" name="brew_setup_id" value="{{ rec.setup_id or '' }}">
       <input type="hidden" name="grind_setting" value="{{ rec.grind_setting }}">
       <input type="hidden" name="temperature" value="{{ rec.temperature }}">
-      {% if rec.method == 'pour-over' %}
-      <input type="hidden" name="bloom_weight" value="{{ rec.bloom_weight }}">
       <input type="hidden" name="dose_in" value="{{ rec.dose_in }}">
-      <input type="hidden" name="brew_volume" value="{{ rec.brew_volume }}">
-      {% else %}
+      {# Generic hidden inputs for all method-specific params present in recommendation #}
+      {% for pdef in param_defs %}
+        {% set pname = pdef.name %}
+        {% if pname not in ('grind_setting', 'temperature', 'dose_in') %}
+          {% if rec is mapping %}
+            {% if rec[pname] is defined and rec[pname] is not none %}
+      <input type="hidden" name="{{ pname }}" value="{{ rec[pname] }}">
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+      {# Legacy params: pass through if present in recommendation (old campaigns) #}
+      {% if rec is mapping %}
+        {% if rec.preinfusion_pct is defined and rec.preinfusion_pct is not none %}
       <input type="hidden" name="preinfusion_pct" value="{{ rec.preinfusion_pct }}">
-      <input type="hidden" name="dose_in" value="{{ rec.dose_in }}">
-      <input type="hidden" name="target_yield" value="{{ rec.target_yield }}">
+        {% endif %}
+        {% if rec.saturation is defined and rec.saturation is not none %}
       <input type="hidden" name="saturation" value="{{ rec.saturation }}">
+        {% endif %}
       {% endif %}
 
       <!-- Taste score -->

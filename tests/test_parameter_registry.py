@@ -171,42 +171,68 @@ class TestRegistryShape:
 
 
 class TestEspressoBackwardCompat:
-    def test_espresso_columns_match_legacy(self):
-        """get_param_columns('espresso') with no brewer must match legacy BAYBE_PARAM_COLUMNS."""
-        assert get_param_columns("espresso") == LEGACY_BAYBE_PARAM_COLUMNS
+    def test_espresso_columns_no_brewer_returns_tier1(self):
+        """Phase 20: get_param_columns('espresso') with no brewer returns Tier 1 (4 params).
 
-    def test_espresso_bounds_match_legacy(self):
-        """get_default_bounds('espresso') must match legacy DEFAULT_BOUNDS for core params."""
+        Legacy params (preinfusion_pct, saturation) are excluded from new campaigns.
+        Capability-gated params are excluded when no brewer context is provided.
+        """
+        columns = get_param_columns("espresso")
+        assert columns == ["grind_setting", "temperature", "dose_in", "target_yield"]
+
+    def test_espresso_legacy_params_still_in_bounds(self):
+        """get_default_bounds includes legacy params — needed for form validation + history."""
         bounds = get_default_bounds("espresso")
-        for param, expected in LEGACY_DEFAULT_BOUNDS.items():
+        # Legacy params must still have bounds for backward compat display
+        assert "preinfusion_pct" in bounds
+        assert bounds["preinfusion_pct"] == LEGACY_DEFAULT_BOUNDS["preinfusion_pct"]
+
+    def test_espresso_bounds_match_legacy_for_core_params(self):
+        """Core param bounds (grind, temp, dose, yield) must match legacy values."""
+        bounds = get_default_bounds("espresso")
+        core_legacy = {
+            k: v for k, v in LEGACY_DEFAULT_BOUNDS.items() if k not in ("preinfusion_pct",)
+        }
+        for param, expected in core_legacy.items():
             assert bounds[param] == expected, f"espresso bounds mismatch for {param}"
 
-    def test_espresso_rounding_matches_legacy(self):
-        """get_rounding_rules('espresso') must match legacy ROUNDING_RULES for core params."""
+    def test_espresso_rounding_matches_legacy_for_core_params(self):
+        """Core param rounding rules (grind, temp, dose, yield) must match legacy values."""
         rules = get_rounding_rules("espresso")
-        for param, expected in LEGACY_ROUNDING_RULES.items():
+        core_legacy = {
+            k: v for k, v in LEGACY_ROUNDING_RULES.items() if k not in ("preinfusion_pct",)
+        }
+        for param, expected in core_legacy.items():
             assert rules[param] == expected, f"espresso rounding mismatch for {param}"
 
-    def test_espresso_build_no_brewer_returns_six_params(self):
-        """build_parameters_for_setup('espresso') with no brewer returns exactly 6 params."""
-        params = build_parameters_for_setup("espresso")
-        assert len(params) == 6
+    def test_espresso_legacy_rounding_still_present(self):
+        """get_rounding_rules includes legacy params — used for historical data display."""
+        rules = get_rounding_rules("espresso")
+        assert "preinfusion_pct" in rules
+        assert rules["preinfusion_pct"] == LEGACY_ROUNDING_RULES["preinfusion_pct"]
 
-    def test_espresso_build_no_brewer_five_continuous_one_categorical(self):
-        """6 espresso params: 5 NumericalContinuous + 1 Categorical."""
+    def test_espresso_build_no_brewer_returns_four_params(self):
+        """Phase 20: build_parameters_for_setup('espresso') with no brewer returns Tier 1 (4 params).
+
+        Legacy params excluded. Capability-gated params excluded without brewer context.
+        """
+        params = build_parameters_for_setup("espresso")
+        assert len(params) == 4
+
+    def test_espresso_build_no_brewer_all_continuous(self):
+        """Phase 20: Tier 1 espresso has 4 NumericalContinuous params, no categoricals."""
         params = build_parameters_for_setup("espresso")
         continuous = [p for p in params if isinstance(p, NumericalContinuousParameter)]
         categorical = [p for p in params if isinstance(p, CategoricalParameter)]
-        assert len(continuous) == 5
-        assert len(categorical) == 1
+        assert len(continuous) == 4
+        assert len(categorical) == 0
 
-    def test_espresso_saturation_is_categorical_ohe(self):
-        """saturation must be CategoricalParameter with OHE encoding and values ['yes','no']."""
+    def test_espresso_legacy_params_excluded_from_new_campaigns(self):
+        """preinfusion_pct and saturation must NOT appear in new espresso campaigns."""
         params = build_parameters_for_setup("espresso")
-        saturation = next(p for p in params if p.name == "saturation")
-        assert isinstance(saturation, CategoricalParameter)
-        # values check
-        assert set(saturation.values) == {"yes", "no"}
+        names = [p.name for p in params]
+        assert "preinfusion_pct" not in names, "Legacy preinfusion_pct must not be in new campaigns"
+        assert "saturation" not in names, "Legacy saturation must not be in new campaigns"
 
 
 # ===========================================================================
@@ -320,19 +346,20 @@ class TestCapabilityFiltering:
         assert "preinfusion_time" in columns
 
     def test_basic_brewer_core_params_still_present(self):
-        """Basic brewer still gets all 6 core espresso params."""
+        """Basic brewer gets all Phase 20 Tier 1 espresso params (no legacy, no advanced)."""
         brewer = make_brewer(preinfusion_type="none", pressure_control_type="fixed")
         params = build_parameters_for_setup("espresso", brewer=brewer)
         names = [p.name for p in params]
         for core_param in [
             "grind_setting",
             "temperature",
-            "preinfusion_pct",
             "dose_in",
             "target_yield",
-            "saturation",
         ]:
             assert core_param in names, f"Core param {core_param} missing with basic brewer"
+        # Legacy params must NOT appear in new campaigns
+        assert "preinfusion_pct" not in names, "Legacy param must not appear in new campaigns"
+        assert "saturation" not in names, "Legacy param must not appear in new campaigns"
 
 
 # ===========================================================================

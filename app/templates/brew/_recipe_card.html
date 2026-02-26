@@ -1,7 +1,9 @@
-{# Reusable recipe card — shows 6 params in large scannable format + ratio.
+{# Reusable recipe card — shows brew params in large scannable format + ratio.
    Context variables needed:
      - rec: dict (from recommendation) OR measurement object with same attrs
      - ratio: str like "1:2.1"
+   Phase 20: displays preinfusion_time instead of preinfusion_pct when present,
+   hides saturation for new campaigns, shows capability-driven advanced params.
 #}
 
 <div class="recipe-params">
@@ -20,13 +22,45 @@
     </span>
   </div>
 
-  <div class="recipe-param">
-    <span class="recipe-label">Pre-inf</span>
-    <span class="recipe-value">
-      {% if rec is mapping %}{{ rec.preinfusion_pct }}{% else %}{{ rec.preinfusion_pct }}{% endif %}
-      <span class="recipe-unit">%</span>
-    </span>
-  </div>
+  {% if rec is mapping %}
+    {# Dict (recommendation) — show preinfusion_time if present, else preinfusion_pct #}
+    {% if rec.preinfusion_time is defined and rec.preinfusion_time is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Pre-inf</span>
+      <span class="recipe-value">
+        {{ rec.preinfusion_time }}
+        <span class="recipe-unit">s</span>
+      </span>
+    </div>
+    {% elif rec.preinfusion_pct is defined and rec.preinfusion_pct is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Pre-inf</span>
+      <span class="recipe-value">
+        {{ rec.preinfusion_pct }}
+        <span class="recipe-unit">%</span>
+      </span>
+    </div>
+    {% endif %}
+  {% else %}
+    {# ORM object (Measurement) — prefer preinfusion_time, fall back to preinfusion_pct #}
+    {% if rec.preinfusion_time is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Pre-inf</span>
+      <span class="recipe-value">
+        {{ rec.preinfusion_time }}
+        <span class="recipe-unit">s</span>
+      </span>
+    </div>
+    {% elif rec.preinfusion_pct is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Pre-inf</span>
+      <span class="recipe-value">
+        {{ rec.preinfusion_pct }}
+        <span class="recipe-unit">%</span>
+      </span>
+    </div>
+    {% endif %}
+  {% endif %}
 
   <div class="recipe-param">
     <span class="recipe-label">Dose</span>
@@ -36,20 +70,94 @@
     </span>
   </div>
 
-  <div class="recipe-param">
-    <span class="recipe-label">Yield</span>
-    <span class="recipe-value">
-      {% if rec is mapping %}{{ rec.target_yield }}{% else %}{{ rec.target_yield }}{% endif %}
-      <span class="recipe-unit">g</span>
-    </span>
-  </div>
+  {% if rec is mapping %}
+    {% if rec.target_yield is defined and rec.target_yield is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Yield</span>
+      <span class="recipe-value">{{ rec.target_yield }}<span class="recipe-unit">g</span></span>
+    </div>
+    {% elif rec.brew_volume is defined and rec.brew_volume is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Volume</span>
+      <span class="recipe-value">{{ rec.brew_volume }}<span class="recipe-unit">ml</span></span>
+    </div>
+    {% endif %}
+  {% else %}
+    {% if rec.target_yield is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Yield</span>
+      <span class="recipe-value">{{ rec.target_yield }}<span class="recipe-unit">g</span></span>
+    </div>
+    {% endif %}
+  {% endif %}
 
-  <div class="recipe-param">
-    <span class="recipe-label">Saturation</span>
-    <span class="recipe-value recipe-value-text">
-      {% if rec is mapping %}{{ rec.saturation }}{% else %}{{ rec.saturation }}{% endif %}
-    </span>
-  </div>
+  {# Phase 20: show brew_pressure when present #}
+  {% if rec is mapping %}
+    {% if rec.brew_pressure is defined and rec.brew_pressure is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Pressure</span>
+      <span class="recipe-value">{{ rec.brew_pressure }}<span class="recipe-unit">bar</span></span>
+    </div>
+    {% endif %}
+    {% if rec.pressure_profile is defined and rec.pressure_profile is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Profile</span>
+      <span class="recipe-value recipe-value-text">{{ rec.pressure_profile | replace("_", " ") }}</span>
+    </div>
+    {% endif %}
+    {% if rec.flow_rate is defined and rec.flow_rate is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Flow</span>
+      <span class="recipe-value">{{ rec.flow_rate }}<span class="recipe-unit">ml/s</span></span>
+    </div>
+    {% endif %}
+    {% if rec.brew_mode is defined and rec.brew_mode is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Mode</span>
+      <span class="recipe-value recipe-value-text">{{ rec.brew_mode | replace("_", " ") }}</span>
+    </div>
+    {% endif %}
+    {# Legacy: show saturation only for old-style recommendations that include it #}
+    {% if rec.saturation is defined and rec.saturation is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Saturation</span>
+      <span class="recipe-value recipe-value-text">{{ rec.saturation }}</span>
+    </div>
+    {% endif %}
+  {% else %}
+    {# ORM Measurement object #}
+    {% if rec.brew_pressure is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Pressure</span>
+      <span class="recipe-value">{{ rec.brew_pressure }}<span class="recipe-unit">bar</span></span>
+    </div>
+    {% endif %}
+    {% if rec.pressure_profile is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Profile</span>
+      <span class="recipe-value recipe-value-text">{{ rec.pressure_profile | replace("_", " ") }}</span>
+    </div>
+    {% endif %}
+    {% if rec.flow_rate is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Flow</span>
+      <span class="recipe-value">{{ rec.flow_rate }}<span class="recipe-unit">ml/s</span></span>
+    </div>
+    {% endif %}
+    {% if rec.brew_mode is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Mode</span>
+      <span class="recipe-value recipe-value-text">{{ rec.brew_mode | replace("_", " ") }}</span>
+    </div>
+    {% endif %}
+    {# Legacy: show saturation for historical measurements that have it #}
+    {% if rec.saturation is not none %}
+    <div class="recipe-param">
+      <span class="recipe-label">Saturation</span>
+      <span class="recipe-value recipe-value-text">{{ rec.saturation }}</span>
+    </div>
+    {% endif %}
+  {% endif %}
 </div>
 
 {% if ratio %}

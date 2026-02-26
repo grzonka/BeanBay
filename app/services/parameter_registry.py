@@ -18,6 +18,17 @@ Each parameter definition dict has the following keys:
   - encoding (str): for categorical params — e.g. "OHE"
   - rounding (float | None): for continuous params — rounding step (None = not in rounding rules)
   - requires (str | None): capability condition string, or None if always included
+  - legacy (bool): if True, param is excluded from new campaigns but kept for historical compat
+
+Phase 20 — Espresso parameter evolution:
+  - preinfusion_pct: legacy=True (kept for backward compat; excluded from new campaigns)
+  - saturation: legacy=True (kept for backward compat; excluded from new campaigns)
+  - New espresso core: grind_setting, temperature, dose_in, target_yield
+  - Tier 2: + preinfusion_time (gated on preinfusion_type != "none")
+  - Tier 3: + brew_pressure (gated on pressure_control_type adjustable/electronic)
+  - Tier 4: + pressure_profile (gated on manual_profiling/programmable pressure)
+  - Tier 5: + flow_rate (gated on flow_control_type != "none")
+  - brew_mode: pressure_priority/flow_priority (gated on flow_control_type programmable)
 """
 
 from __future__ import annotations
@@ -54,19 +65,32 @@ METHOD_GRIND_PERCENTAGES: dict[str, tuple[float, float]] = {
 # ---------------------------------------------------------------------------
 PARAMETER_REGISTRY: dict[str, list[dict[str, Any]]] = {
     # ------------------------------------------------------------------
-    # Espresso — backward-compatible with optimizer.py constants
-    # Core params (no requires):
-    #   grind_setting, temperature, preinfusion_pct, dose_in, target_yield, saturation
-    # Advanced params (requires brewer capability):
-    #   preinfusion_time, brew_pressure, pressure_profile
+    # Espresso — Phase 20 capability-driven parameter evolution
+    #
+    # Tier 1 (all machines):
+    #   grind_setting, temperature, dose_in, target_yield
+    # Tier 2 (timed/adjustable/programmable preinfusion):
+    #   + preinfusion_time
+    # Tier 3 (pressure adjustable/electronic/programmable):
+    #   + brew_pressure
+    # Tier 4 (manual_profiling or programmable pressure):
+    #   + pressure_profile
+    # Tier 5 (flow control available):
+    #   + flow_rate
+    # brew_mode: categorical for programmable flow control
+    #
+    # Legacy (legacy=True — excluded from new campaigns, kept for existing ones):
+    #   preinfusion_pct, saturation
     # ------------------------------------------------------------------
     "espresso": [
+        # ── Tier 1: always included ────────────────────────────────────
         {
             "name": "grind_setting",
             "type": "continuous",
             "bounds": (15.0, 25.0),
             "rounding": 0.5,
             "requires": None,
+            "legacy": False,
         },
         {
             "name": "temperature",
@@ -74,13 +98,7 @@ PARAMETER_REGISTRY: dict[str, list[dict[str, Any]]] = {
             "bounds": (86.0, 96.0),
             "rounding": 1.0,
             "requires": None,
-        },
-        {
-            "name": "preinfusion_pct",
-            "type": "continuous",
-            "bounds": (55.0, 100.0),
-            "rounding": 5.0,
-            "requires": None,
+            "legacy": False,
         },
         {
             "name": "dose_in",
@@ -88,6 +106,7 @@ PARAMETER_REGISTRY: dict[str, list[dict[str, Any]]] = {
             "bounds": (18.5, 20.0),
             "rounding": 0.5,
             "requires": None,
+            "legacy": False,
         },
         {
             "name": "target_yield",
@@ -95,6 +114,65 @@ PARAMETER_REGISTRY: dict[str, list[dict[str, Any]]] = {
             "bounds": (36.0, 50.0),
             "rounding": 1.0,
             "requires": None,
+            "legacy": False,
+        },
+        # ── Tier 2: timed/adjustable/programmable pre-infusion ─────────
+        {
+            "name": "preinfusion_time",
+            "type": "continuous",
+            "bounds": (0.0, 15.0),
+            "rounding": 1.0,
+            "requires": "brewer.preinfusion_type in (timed, adjustable_pressure, programmable)",
+            "legacy": False,
+        },
+        # ── Tier 3: adjustable/electronic/programmable pressure ────────
+        {
+            "name": "brew_pressure",
+            "type": "continuous",
+            "bounds": (6.0, 9.5),
+            "rounding": 0.5,
+            "requires": "brewer.pressure_control_type in (opv_adjustable, electronic, programmable)",
+            "legacy": False,
+        },
+        # ── Tier 4: profiling pressure ─────────────────────────────────
+        {
+            "name": "pressure_profile",
+            "type": "categorical",
+            "values": ["flat", "ramp_up", "ramp_down", "pre_infusion_ramp"],
+            "encoding": "OHE",
+            "rounding": None,
+            "requires": "brewer.pressure_control_type in (manual_profiling, programmable)",
+            "legacy": False,
+        },
+        # ── Tier 5: flow control ───────────────────────────────────────
+        {
+            "name": "flow_rate",
+            "type": "continuous",
+            "bounds": (1.0, 12.0),
+            "rounding": 0.5,
+            "requires": "brewer.flow_control_type in (manual_paddle, manual_valve, programmable)",
+            "legacy": False,
+        },
+        # ── brew_mode: programmable flow control ───────────────────────
+        {
+            "name": "brew_mode",
+            "type": "categorical",
+            "values": ["pressure_priority", "flow_priority"],
+            "encoding": "OHE",
+            "rounding": None,
+            "requires": "brewer.flow_control_type in (programmable)",
+            "legacy": False,
+        },
+        # ── Legacy params: kept in registry but excluded from new campaigns
+        # Existing serialized BayBE campaigns that include these in their
+        # searchspace continue to work via Campaign.from_json().
+        {
+            "name": "preinfusion_pct",
+            "type": "continuous",
+            "bounds": (55.0, 100.0),
+            "rounding": 5.0,
+            "requires": None,
+            "legacy": True,  # excluded from NEW campaigns; existing campaigns unaffected
         },
         {
             "name": "saturation",
@@ -103,31 +181,7 @@ PARAMETER_REGISTRY: dict[str, list[dict[str, Any]]] = {
             "encoding": "OHE",
             "rounding": None,
             "requires": None,
-        },
-        # Advanced — gated on preinfusion capability
-        {
-            "name": "preinfusion_time",
-            "type": "continuous",
-            "bounds": (0.0, 15.0),
-            "rounding": 1.0,
-            "requires": "brewer.preinfusion_type in (timed, adjustable_pressure, programmable)",
-        },
-        # Advanced — gated on pressure control
-        {
-            "name": "brew_pressure",
-            "type": "continuous",
-            "bounds": (6.0, 9.5),
-            "rounding": 0.5,
-            "requires": "brewer.pressure_control_type in (opv_adjustable, electronic, programmable)",
-        },
-        # Advanced — gated on profiling capability
-        {
-            "name": "pressure_profile",
-            "type": "categorical",
-            "values": ["flat", "ramp_up", "ramp_down", "pre_infusion_ramp"],
-            "encoding": "OHE",
-            "rounding": None,
-            "requires": "brewer.pressure_control_type in (manual_profiling, programmable)",
+            "legacy": True,  # excluded from NEW campaigns; existing campaigns unaffected
         },
     ],
     # ------------------------------------------------------------------
@@ -436,6 +490,10 @@ def build_parameters_for_setup(
 ) -> list:
     """Build BayBE parameter objects for the given method and brewer.
 
+    Legacy-flagged parameters (e.g. preinfusion_pct, saturation) are excluded from
+    new campaigns.  Existing serialised campaigns with legacy params in their searchspace
+    continue to work via Campaign.from_json() without going through this function.
+
     Args:
         method: Brew method (e.g. "espresso", "pour-over").
         brewer: Brewer ORM instance for capability gating, or None for backward compat.
@@ -448,6 +506,9 @@ def build_parameters_for_setup(
 
     parameters = []
     for pdef in param_defs:
+        # Skip legacy params — they are excluded from NEW campaigns
+        if pdef.get("legacy", False):
+            continue
         if not requires_check(pdef.get("requires"), brewer):
             continue
 
@@ -478,6 +539,8 @@ def build_parameters_for_setup(
 def get_param_columns(method: str, brewer: Any = None) -> list[str]:
     """Return parameter column names for the given method and brewer.
 
+    Legacy-flagged parameters are excluded (they are not part of new BayBE campaigns).
+
     Args:
         method: Brew method name.
         brewer: Brewer instance for capability gating, or None for backward compat.
@@ -486,11 +549,34 @@ def get_param_columns(method: str, brewer: Any = None) -> list[str]:
         Ordered list of parameter name strings.
     """
     param_defs = PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
-    return [pdef["name"] for pdef in param_defs if requires_check(pdef.get("requires"), brewer)]
+    return [
+        pdef["name"]
+        for pdef in param_defs
+        if not pdef.get("legacy", False) and requires_check(pdef.get("requires"), brewer)
+    ]
+
+
+def get_legacy_param_columns(method: str) -> list[str]:
+    """Return names of legacy parameters for the given method.
+
+    These are parameters that are kept in the DB for historical data but are
+    excluded from new BayBE campaigns.
+
+    Args:
+        method: Brew method name.
+
+    Returns:
+        List of legacy parameter name strings.
+    """
+    param_defs = PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
+    return [pdef["name"] for pdef in param_defs if pdef.get("legacy", False)]
 
 
 def get_default_bounds(method: str) -> dict[str, tuple[float, float]]:
     """Return default parameter bounds for continuous params of the given method.
+
+    Includes both active and legacy continuous params (useful for form validation
+    and manual-brew UI which may still show legacy params for old setups).
 
     Args:
         method: Brew method name.
@@ -504,6 +590,9 @@ def get_default_bounds(method: str) -> dict[str, tuple[float, float]]:
 
 def get_rounding_rules(method: str) -> dict[str, float]:
     """Return rounding rules for continuous params of the given method.
+
+    Includes both active and legacy continuous params (for consistent rounding
+    when displaying historical data).
 
     Args:
         method: Brew method name.

@@ -34,7 +34,7 @@ async def test_create_campaign(optimizer_service, db_session):
 
 
 async def test_recommend_returns_all_params(optimizer_service):
-    """recommend() returns all 6 params + recommendation_id within bounds."""
+    """recommend() returns all Phase-20 Tier-1 params + recommendation_id within bounds."""
     key = make_campaign_key("test-bean", "espresso", None)
     rec = await optimizer_service.recommend(key)
 
@@ -45,13 +45,12 @@ async def test_recommend_returns_all_params(optimizer_service):
     assert "recommendation_id" in rec
     assert rec["recommendation_id"]  # non-empty
 
-    # Check bounds
+    # Check bounds — Phase 20 Tier 1: grind_setting, temperature, dose_in, target_yield
+    # preinfusion_pct and saturation are legacy params excluded from new campaigns
     assert 15.0 <= rec["grind_setting"] <= 25.0
     assert 86.0 <= rec["temperature"] <= 96.0
-    assert 55.0 <= rec["preinfusion_pct"] <= 100.0
     assert 18.5 <= rec["dose_in"] <= 20.0
     assert 36.0 <= rec["target_yield"] <= 50.0
-    assert rec["saturation"] in ("yes", "no")
 
 
 async def test_recommend_rounding(optimizer_service):
@@ -61,9 +60,9 @@ async def test_recommend_rounding(optimizer_service):
 
     assert rec["grind_setting"] % 0.5 == 0, f"grind not rounded: {rec['grind_setting']}"
     assert rec["temperature"] % 1.0 == 0, f"temp not rounded: {rec['temperature']}"
-    assert rec["preinfusion_pct"] % 5.0 == 0, f"preinfusion not rounded: {rec['preinfusion_pct']}"
     assert rec["dose_in"] % 0.5 == 0, f"dose not rounded: {rec['dose_in']}"
     assert rec["target_yield"] % 1.0 == 0, f"yield not rounded: {rec['target_yield']}"
+    # preinfusion_pct is a legacy param excluded from new Phase-20 campaigns
 
 
 async def test_add_measurement_and_recommend_again(optimizer_service, db_session):
@@ -219,11 +218,10 @@ async def test_recommend_with_overrides(optimizer_service):
 
     assert 20.0 <= rec["grind_setting"] <= 22.0
     assert 92.0 <= rec["temperature"] <= 94.0
-    # Non-overridden params use defaults
-    assert 55.0 <= rec["preinfusion_pct"] <= 100.0
+    # Non-overridden Phase-20 Tier-1 params use defaults
+    # preinfusion_pct and saturation are legacy params excluded from new campaigns
     assert 18.5 <= rec["dose_in"] <= 20.0
     assert 36.0 <= rec["target_yield"] <= 50.0
-    assert rec["saturation"] in ("yes", "no")
 
 
 async def test_campaign_invalidation_on_override_change(optimizer_service):
