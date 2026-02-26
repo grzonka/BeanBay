@@ -23,87 +23,25 @@ if TYPE_CHECKING:
 import pandas as pd
 from baybe.campaign import Campaign
 from baybe.objectives import SingleTargetObjective
-from baybe.parameters import CategoricalParameter, NumericalContinuousParameter
 from baybe.recommenders import BotorchRecommender, TwoPhaseMetaRecommender
 from baybe.recommenders.pure.nonpredictive.sampling import RandomRecommender
 from baybe.searchspace import SearchSpace
 from baybe.targets import NumericalTarget
 
-# BayBE parameter column names for espresso (the 6 recipe params)
-BAYBE_PARAM_COLUMNS = [
-    "grind_setting",
-    "temperature",
-    "preinfusion_pct",
-    "dose_in",
-    "target_yield",
-    "saturation",
-]
+from app.services.parameter_registry import (
+    build_parameters_for_setup,
+    get_default_bounds,
+    get_param_columns,
+    get_rounding_rules,
+)
 
-# Pour-over BayBE parameter columns
-POUR_OVER_PARAM_COLUMNS = [
-    "grind_setting",
-    "temperature",
-    "bloom_weight",
-    "dose_in",
-    "brew_volume",
-]
-
-# Default parameter bounds for espresso (used when no overrides specified)
-DEFAULT_BOUNDS: dict[str, tuple[float, float]] = {
-    "grind_setting": (15.0, 25.0),
-    "temperature": (86.0, 96.0),
-    "preinfusion_pct": (55.0, 100.0),
-    "dose_in": (18.5, 20.0),
-    "target_yield": (36.0, 50.0),
-}
-
-# Pour-over default parameter bounds
-POUR_OVER_DEFAULT_BOUNDS: dict[str, tuple[float, float]] = {
-    "grind_setting": (15.0, 40.0),  # coarser grind for pour-over
-    "temperature": (88.0, 98.0),
-    "bloom_weight": (20.0, 80.0),  # grams of water for bloom
-    "dose_in": (12.0, 22.0),  # dose in grams
-    "brew_volume": (150.0, 500.0),  # total brew volume in ml
-}
-
-# Rounding rules for espresso (practical precision)
-ROUNDING_RULES: dict[str, float] = {
-    "grind_setting": 0.5,
-    "temperature": 1.0,
-    "preinfusion_pct": 5.0,
-    "dose_in": 0.5,
-    "target_yield": 1.0,
-}
-
-# Rounding rules for pour-over
-POUR_OVER_ROUNDING_RULES: dict[str, float] = {
-    "grind_setting": 0.5,
-    "temperature": 1.0,
-    "bloom_weight": 1.0,
-    "dose_in": 0.5,
-    "brew_volume": 5.0,
-}
-
-
-def _get_param_columns(method: str) -> list[str]:
-    """Return BayBE parameter column names for the given method."""
-    if method == "pour-over":
-        return POUR_OVER_PARAM_COLUMNS
-    return BAYBE_PARAM_COLUMNS  # espresso and all others
-
-
-def _get_default_bounds(method: str) -> dict[str, tuple[float, float]]:
-    """Return default parameter bounds for the given method."""
-    if method == "pour-over":
-        return dict(POUR_OVER_DEFAULT_BOUNDS)
-    return dict(DEFAULT_BOUNDS)
-
-
-def _get_rounding_rules(method: str) -> dict[str, float]:
-    """Return rounding rules for the given method."""
-    if method == "pour-over":
-        return POUR_OVER_ROUNDING_RULES
-    return ROUNDING_RULES
+# Backward-compat re-exports (will be removed when routers migrate to parameter_registry)
+BAYBE_PARAM_COLUMNS = get_param_columns("espresso")
+POUR_OVER_PARAM_COLUMNS = get_param_columns("pour-over")
+DEFAULT_BOUNDS = get_default_bounds("espresso")
+POUR_OVER_DEFAULT_BOUNDS = get_default_bounds("pour-over")
+ROUNDING_RULES = get_rounding_rules("espresso")
+POUR_OVER_ROUNDING_RULES = get_rounding_rules("pour-over")
 
 
 def _round_value(value: float, step: float) -> float:
@@ -126,7 +64,7 @@ def _resolve_bounds(
     Returns:
         Complete bounds dict for all continuous parameters of the given method.
     """
-    bounds = _get_default_bounds(method)
+    bounds = get_default_bounds(method)
     if overrides:
         for param, spec in overrides.items():
             if param in bounds and isinstance(spec, dict):
@@ -139,42 +77,6 @@ def _bounds_fingerprint(bounds: dict[str, tuple[float, float]]) -> str:
     """Stable hash of the resolved bounds, used to detect override changes."""
     canonical = json.dumps(sorted(bounds.items()), sort_keys=True)
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
-
-
-def _build_parameters(
-    bounds: dict[str, tuple[float, float]],
-    method: str = "espresso",
-) -> list:
-    """Build BayBE parameter list for the given method and resolved bounds.
-
-    Extracted so both OptimizerService and TransferLearningService can share
-    the parameter-building logic without code duplication.
-
-    Args:
-        bounds: Resolved parameter bounds (from _resolve_bounds).
-        method: Brew method — determines parameter set.
-
-    Returns:
-        List of BayBE parameter objects.
-    """
-    if method == "pour-over":
-        return [
-            NumericalContinuousParameter(name="grind_setting", bounds=bounds["grind_setting"]),
-            NumericalContinuousParameter(name="temperature", bounds=bounds["temperature"]),
-            NumericalContinuousParameter(name="bloom_weight", bounds=bounds["bloom_weight"]),
-            NumericalContinuousParameter(name="dose_in", bounds=bounds["dose_in"]),
-            NumericalContinuousParameter(name="brew_volume", bounds=bounds["brew_volume"]),
-        ]
-    else:
-        # espresso and all other methods — 5 continuous + 1 categorical
-        return [
-            NumericalContinuousParameter(name="grind_setting", bounds=bounds["grind_setting"]),
-            NumericalContinuousParameter(name="temperature", bounds=bounds["temperature"]),
-            NumericalContinuousParameter(name="preinfusion_pct", bounds=bounds["preinfusion_pct"]),
-            NumericalContinuousParameter(name="dose_in", bounds=bounds["dose_in"]),
-            NumericalContinuousParameter(name="target_yield", bounds=bounds["target_yield"]),
-            CategoricalParameter(name="saturation", values=["yes", "no"], encoding="OHE"),
-        ]
 
 
 class OptimizerService:
@@ -253,8 +155,7 @@ class OptimizerService:
                        e.g. {"grind_setting": {"min": 18.0, "max": 22.0}}
             method: Brew method — determines parameter set (espresso vs pour-over).
         """
-        bounds = _resolve_bounds(overrides, method)
-        parameters = _build_parameters(bounds, method)
+        parameters = build_parameters_for_setup(method, brewer=None, overrides=overrides)
         searchspace = SearchSpace.from_product(parameters=parameters)
         target = NumericalTarget(name="taste")
         objective = SingleTargetObjective(target=target)
@@ -331,7 +232,7 @@ class OptimizerService:
                 measurements_df = old_campaign.measurements
                 new_campaign = self._create_fresh_campaign(overrides, method)
                 if not measurements_df.empty:
-                    param_cols = _get_param_columns(method)
+                    param_cols = get_param_columns(method)
                     # For transfer campaigns the measurements include bean_task — filter to
                     # only the standard BayBE columns so we can add them to a fresh campaign.
                     available_cols = [
@@ -396,7 +297,7 @@ class OptimizerService:
             rec = rec_df.iloc[0].to_dict()
 
             # Round to practical precision
-            rounding = _get_rounding_rules(method)
+            rounding = get_rounding_rules(method)
             for param, step in rounding.items():
                 if param in rec:
                     rec[param] = _round_value(float(rec[param]), step)
@@ -427,7 +328,7 @@ class OptimizerService:
         """
         campaign = self.get_or_create_campaign(campaign_key, overrides, method)
         # Only include method-appropriate BayBE columns + taste
-        param_cols = _get_param_columns(method)
+        param_cols = get_param_columns(method)
         baybe_data = {k: measurement[k] for k in param_cols + ["taste"] if k in measurement}
         # For transfer learning campaigns, include the bean_task column
         if target_bean_id is not None and self.get_transfer_metadata(campaign_key) is not None:
@@ -454,7 +355,7 @@ class OptimizerService:
         """
         campaign = self._create_fresh_campaign(overrides, method)
         if not measurements_df.empty:
-            param_cols = _get_param_columns(method)
+            param_cols = get_param_columns(method)
             baybe_cols = param_cols + ["taste"]
             campaign.add_measurements(
                 measurements_df[baybe_cols],
@@ -542,7 +443,7 @@ class OptimizerService:
 
             if not is_random and shot_count >= 2:
                 try:
-                    param_cols = _get_param_columns(method)
+                    param_cols = get_param_columns(method)
                     rec_df = pd.DataFrame([{k: rec_dict[k] for k in param_cols if k in rec_dict}])
                     stats = campaign.posterior_stats(rec_df)
                     predicted_mean = round(float(stats["taste_mean"].iloc[0]), 1)
