@@ -371,8 +371,10 @@ def requires_check(condition_str: str | None, brewer: Any) -> bool:
     Condition format:  ``brewer.{attr} in ({val1}, {val2}, ...)``
 
     Rules:
-    - If condition_str is None → return True (always include)
-    - If brewer is None → return True (backward-compat: include all when no brewer)
+    - If condition_str is None → return True (always include the param)
+    - If brewer is None and condition_str is not None → return False
+      (backward-compat: no brewer context means advanced gated params are excluded,
+      producing the legacy 6-param espresso set)
     - Otherwise parse and evaluate the condition
 
     Args:
@@ -385,7 +387,7 @@ def requires_check(condition_str: str | None, brewer: Any) -> bool:
     if condition_str is None:
         return True
     if brewer is None:
-        return True
+        return False  # No brewer context → exclude all gated params
 
     # Parse: "brewer.{attr} in ({val1}, {val2}, ...)"
     try:
