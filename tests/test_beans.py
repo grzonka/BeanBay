@@ -17,11 +17,19 @@ def sample_bean(db_session):
     return bean
 
 
-# --- Root redirect ---
+# --- Root route ---
 
 
-def test_root_redirects_to_beans(client):
-    """GET / redirects to /beans."""
+def test_root_shows_welcome_when_empty(client):
+    """GET / shows welcome page when no beans exist."""
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 200
+    assert "BeanBay" in response.text
+    assert "Add Your First Bean" in response.text
+
+
+def test_root_redirects_to_beans_when_beans_exist(client, sample_bean):
+    """GET / redirects to /beans when beans exist."""
     response = client.get("/", follow_redirects=False)
     assert response.status_code == 303
     assert response.headers["location"] == "/beans"

@@ -3,12 +3,14 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import Base, SessionLocal, engine
+from app.database import Base, SessionLocal, engine, get_db
 from app.routers import analytics, beans, brew, equipment, history, insights
 from app.services.migration import (
     migrate_campaigns_to_db,
@@ -79,7 +81,15 @@ async def health():
     return {"status": "ok", "service": "beanbay"}
 
 
-@app.get("/")
-async def root():
-    """Redirect to bean list — the home screen."""
+templates = Jinja2Templates(directory="app/templates")
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request, db: Session = Depends(get_db)):
+    """Show welcome page if no beans exist, otherwise redirect to beans."""
+    from app.models.bean import Bean
+
+    bean_count = db.query(Bean).count()
+    if bean_count == 0:
+        return templates.TemplateResponse(request, "welcome.html")
     return RedirectResponse(url="/beans", status_code=303)
