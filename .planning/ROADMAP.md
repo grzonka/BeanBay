@@ -7,7 +7,7 @@
 - ✅ **v0.1.1 UX Polish & Manual Brew** — Phases 10-12 (shipped 2026-02-22)
 - ✅ **v0.2.0 Multi-Method & Intelligence** — Phases 13-16 (shipped 2026-02-23)
 - ✅ **v0.3.0 Equipment Intelligence & Parameter Evolution** — Phases 17-22 (shipped 2026-02-26)
-- 🔧 **v0.3.0 Pre-Release Fixes** — Phase 23 ✅ Complete
+- ✅ **v0.3.0 Pre-Release Fixes** — Phase 23 (shipped 2026-02-26)
 
 ## Phases
 
