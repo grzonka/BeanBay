@@ -27,10 +27,10 @@ from app.models.measurement import Measurement
 from app.models.pending_recommendation import PendingRecommendation
 from app.routers.beans import _get_active_bean
 from app.services.optimizer import (
-    DEFAULT_BOUNDS,
     _resolve_bounds,
     _round_value,
 )
+from app.services.parameter_registry import get_default_bounds
 from app.services.optimizer_key import make_campaign_key
 
 router = APIRouter(prefix="/brew", tags=["brew"])
@@ -514,7 +514,8 @@ async def extend_ranges(
     form = await request.form()
     overrides = dict(bean.parameter_overrides or {})
 
-    for param in DEFAULT_BOUNDS:
+    # TODO(Phase 20): make method-aware using active setup's method
+    for param in get_default_bounds("espresso"):
         new_min = form.get(f"{param}_min")
         new_max = form.get(f"{param}_max")
         if new_min is not None or new_max is not None:

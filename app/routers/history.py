@@ -307,7 +307,7 @@ async def delete_batch(request: Request, db: Session = Depends(get_db)):
     """Delete selected measurements and rebuild BayBE campaigns for affected beans."""
     import pandas as pd
 
-    from app.services.optimizer import BAYBE_PARAM_COLUMNS
+    from app.services.parameter_registry import get_param_columns
 
     form = await request.form()
     shot_ids = form.getlist("shot_ids")
@@ -332,10 +332,12 @@ async def delete_batch(request: Request, db: Session = Depends(get_db)):
         remaining = db.query(Measurement).filter(Measurement.bean_id == bean_id).all()
         overrides = bean.parameter_overrides if bean else None
         if remaining:
+            # TODO(Phase 20): make method-aware for non-espresso campaigns
+            param_columns = get_param_columns("espresso")
             df = pd.DataFrame(
                 [
                     {
-                        **{col: getattr(m, col) for col in BAYBE_PARAM_COLUMNS},
+                        **{col: getattr(m, col) for col in param_columns},
                         "taste": m.taste,
                     }
                     for m in remaining
