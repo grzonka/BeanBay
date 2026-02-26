@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 22 COMPLETE. Phase 17 COMPLETE. Phase 18 COMPLETE. Wave 1 done.
-Plan: 17-01 ✅, 17-02 ✅, 17-03 ✅, 18-01 ✅, 18-02 ✅, 22-01 ✅, 22-02 ✅, 22-04 ✅, 22-05 ✅, 22-06 ✅ — 10 plans complete
-Status: Phases 17, 18, 22 all COMPLETE. Next: Phase 19 (parameter evolution) or Phase 20/21.
-Last activity: 2026-02-26 — Completed Phase 22 Plan 06 (cleanup + espresso theme human-approved)
+Phase: 19 — Parameter Registry & Dynamic Search Space (in progress)
+Plan: 19-01 ✅ complete
+Status: Phase 19 in progress — 1/3 plans complete
+Last activity: 2026-02-26 — Completed 19-01-PLAN.md (parameter registry module + 53 tests)
 
-Progress: [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~25% (11/~18 v0.3.0 plans)
+Progress: [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~27% (12/~18 v0.3.0 plans)
 
 ## Performance Metrics
 
@@ -40,6 +40,11 @@ Progress: [████████████░░░░░░░░░░░
 
 ### Key Technical Decisions
 See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
+
+### Phase 19 Plan 01 Key Decisions
+- **brewer=None + non-None condition → False (exclude gated params):** Produces legacy 6-param espresso set for backward compat. "No brewer context" = "don't assume advanced capabilities."
+- **get_default_bounds() returns all continuous params unfiltered:** Bounds are method-level metadata; capability filtering happens at build_parameters_for_setup() / get_param_columns() time.
+- **Phase is additive-only:** optimizer.py unchanged, all 284 existing tests still pass.
 
 ### Branding
 - **Name:** BeanBay | **Domain:** beanbay.coffee
@@ -152,13 +157,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-26
-- **What happened:** Completed Phase 22 Plan 06 (cleanup + verification). Fixed custom `espresso` daisyUI theme through 3 iterations: (1) wrong oklch values were ~half correct lightness, (2) correct lightness but chroma too low (0.010) so backgrounds looked grey, (3) final: chroma boosted 3x (0.030) + lightness +4% for comfortable warmth. Human visually approved. 284 tests pass, Docker build succeeds.
-- **Where we left off:** Phases 17, 18, 22 all complete. Wave 1 of v0.3.0 done.
+- **What happened:** Completed Phase 19 Plan 01 — created `app/services/parameter_registry.py` (PARAMETER_REGISTRY for 7 brew methods, requires_check, build_parameters_for_setup, get_param_columns, get_default_bounds, get_rounding_rules, suggest_grind_range) and `tests/test_parameter_registry.py` (53 tests, all passing). Key design decision: brewer=None excludes gated params (returns legacy 6-param espresso set). All 284 existing tests still pass.
+- **Where we left off:** Phase 19 in progress — 1/3 plans complete.
 
 ### Next Steps
-1. Plan Phase 19 — Parameter Registry & Dynamic Search Space (depends on Phase 18 ✅)
-2. Plan Phase 20 — Advanced Espresso Parameters (depends on Phase 19)
-3. Phase 21 — Pour-over / Aeropress parameter sets (depends on Phase 19)
+1. Phase 19 Plan 02 — Refactor optimizer.py to use build_parameters_for_setup() from registry
+2. Phase 19 Plan 03 — Migrate routers to use get_param_columns() for form field generation
+3. Phase 20 — Advanced Espresso Parameters (depends on Phase 19)
 
 ---
 *State initialized: 2026-02-21*
