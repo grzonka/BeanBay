@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 19 — Parameter Registry & Dynamic Search Space (in progress)
-Plan: 19-01 ✅ complete
-Status: Phase 19 in progress — 1/3 plans complete
-Last activity: 2026-02-26 — Completed 19-01-PLAN.md (parameter registry module + 53 tests)
+Plan: 19-03 ✅ complete
+Status: Phase 19 in progress — 3/3 plans complete (pending 19-02 SUMMARY)
+Last activity: 2026-02-26 — Completed 19-03-PLAN.md (router migration + transfer_learning bug fix, 337/337 tests pass)
 
-Progress: [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~27% (12/~18 v0.3.0 plans)
+Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~33% (14/~18 v0.3.0 plans)
 
 ## Performance Metrics
 
@@ -40,6 +40,11 @@ Progress: [████████████░░░░░░░░░░░
 
 ### Key Technical Decisions
 See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
+
+### Phase 19 Plan 03 Key Decisions
+- **Router imports from parameter_registry directly:** brew.py, beans.py, history.py no longer import DEFAULT_BOUNDS or BAYBE_PARAM_COLUMNS from optimizer.py
+- **"espresso" hardcoded with TODO(Phase 20) comments:** extend_ranges() and history.py param_columns lack brew method context; Phase 20 will make these dynamic
+- **transfer_learning.py ghost references fixed:** _build_parameters/_get_param_columns/_resolve_bounds were removed from optimizer.py but transfer_learning.py still referenced them; replaced with build_parameters_for_setup/get_param_columns from parameter_registry
 
 ### Phase 19 Plan 01 Key Decisions
 - **brewer=None + non-None condition → False (exclude gated params):** Produces legacy 6-param espresso set for backward compat. "No brewer context" = "don't assume advanced capabilities."
@@ -157,13 +162,12 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-26
-- **What happened:** Completed Phase 19 Plan 01 — created `app/services/parameter_registry.py` (PARAMETER_REGISTRY for 7 brew methods, requires_check, build_parameters_for_setup, get_param_columns, get_default_bounds, get_rounding_rules, suggest_grind_range) and `tests/test_parameter_registry.py` (53 tests, all passing). Key design decision: brewer=None excludes gated params (returns legacy 6-param espresso set). All 284 existing tests still pass.
-- **Where we left off:** Phase 19 in progress — 1/3 plans complete.
+- **What happened:** Completed Phase 19 Plan 03 — migrated brew.py, beans.py, history.py from optimizer.py constants to parameter_registry imports. Fixed ghost function references in transfer_learning.py (NameError on _build_parameters/_get_param_columns). All 337 tests pass.
+- **Where we left off:** Phase 19: 3/3 plans complete (19-02 SUMMARY may be pending from parallel wave).
 
 ### Next Steps
-1. Phase 19 Plan 02 — Refactor optimizer.py to use build_parameters_for_setup() from registry
-2. Phase 19 Plan 03 — Migrate routers to use get_param_columns() for form field generation
-3. Phase 20 — Advanced Espresso Parameters (depends on Phase 19)
+1. Phase 19 Plan 02 SUMMARY (if not yet created — was in parallel wave with 19-03)
+2. Phase 20 — Advanced Espresso Parameters (depends on Phase 19 complete)
 
 ---
 *State initialized: 2026-02-21*
