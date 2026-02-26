@@ -2,6 +2,12 @@
 
 {% block title %}Recommendation — BeanBay{% endblock %}
 
+{# Meta tags for hints.js: bean identity + present params for "new" badge logic #}
+{% block head_extra %}
+<meta name="bb-bean-id" content="{{ active_bean.id }}">
+<meta name="bb-rec-params" content="{{ param_defs | map(attribute='name') | list | tojson }}">
+{% endblock %}
+
 {% block content %}
 <div class="flex items-center justify-between mb-6 min-h-12">
   <h1 class="text-xl font-bold">This Shot</h1>
@@ -15,6 +21,35 @@
     {% include "brew/_recipe_card.html" %}
   </div>
 </div>
+
+{# One-time parameter onboarding hints — shown on first encounter of each param, dismissed via localStorage #}
+{% if param_hints %}
+<div id="param-hints-container" class="mb-4">
+  {% for pdef in param_defs %}
+    {% if pdef.name in param_hints %}
+      {% if rec is mapping and rec[pdef.name] is defined and rec[pdef.name] is not none %}
+  <div
+    class="param-hint-card alert alert-info mb-2 hidden"
+    data-param="{{ pdef.name }}"
+    data-hint="{{ param_hints[pdef.name] }}"
+    id="hint-{{ pdef.name }}"
+  >
+    <span class="text-sm flex-1">
+      <strong class="font-semibold capitalize">{{ pdef.name | replace("_", " ") }}:</strong>
+      {{ param_hints[pdef.name] }}
+    </span>
+    <button
+      type="button"
+      class="btn btn-ghost btn-xs"
+      onclick="window.paramHintManager && window.paramHintManager.dismiss('{{ pdef.name }}')"
+      aria-label="Dismiss hint"
+    >✕</button>
+  </div>
+      {% endif %}
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
 
 {% include "brew/_recommendation_insights.html" %}
 
@@ -133,4 +168,5 @@
 
 {% block scripts %}
 <script src="/static/js/tags.js"></script>
+<script src="/static/js/hints.js"></script>
 {% endblock %}

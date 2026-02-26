@@ -40,6 +40,20 @@ from app.services.optimizer_key import make_campaign_key
 router = APIRouter(prefix="/brew", tags=["brew"])
 templates = Jinja2Templates(directory="app/templates")
 
+# One-time onboarding hints shown on first encounter of each parameter.
+# Passed to recommend.html so data-param-hint attributes can be set server-side.
+PARAM_HINTS: dict[str, str] = {
+    "preinfusion_time": "Hold at low pressure for this duration before ramping up",
+    "preinfusion_pressure": "Pressure during the pre-infusion phase (bar)",
+    "brew_pressure": "Target pressure during the main extraction (bar)",
+    "pressure_profile": "How pressure changes during extraction",
+    "flow_rate": "Water flow rate through the puck (ml/s)",
+    "bloom_pause": "Pause to let grounds bloom before continuing",
+    "temp_profile": "How temperature changes during extraction",
+    "brew_mode": "Whether to prioritize pressure or flow control",
+    "saturation": "Pre-wet the puck at low flow rate before extraction",
+}
+
 # All measurement columns that can be set from form data, keyed by param name.
 # This covers core params + all method-specific params across Phases 20 and 21.
 _MEASUREMENT_FLOAT_COLUMNS = {
@@ -310,6 +324,7 @@ async def show_recommendation(
             "insights": insights,
             "transfer_metadata": transfer_metadata,
             "param_defs": param_defs,
+            "param_hints": PARAM_HINTS,
             "method": method,
         },
     )

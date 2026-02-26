@@ -967,3 +967,56 @@ def test_decline_rebuild_route_calls_decline_and_redirects(active_client):
     assert response.headers["location"] == "/brew"
 
     mock_optimizer.decline_rebuild.assert_called_once_with("abc__espresso__None")
+
+
+# ---------------------------------------------------------------------------
+# Phase 20 Plan 03 — param_hints and PARAM_HINTS coverage
+# ---------------------------------------------------------------------------
+
+
+def test_show_recommendation_context_includes_param_hints(active_client, sample_bean, db_session):
+    """GET /brew/recommend/{id} response includes param hint text for Phase 20 params."""
+    rec_id = str(uuid.uuid4())
+    rec = _make_rec(rec_id)
+
+    db_session.add(PendingRecommendation(recommendation_id=rec_id, recommendation_data=rec))
+    db_session.commit()
+
+    response = active_client.get(f"/brew/recommend/{rec_id}")
+    assert response.status_code == 200
+    # The route passes param_hints to the template; the template renders data-param-hint attrs
+    # on hint cards. Verify the hints container is rendered (even if no hints are visible
+    # without localStorage context, the container + data attrs are present).
+    assert "param-hints-container" in response.text
+
+
+def test_param_hints_dict_covers_phase20_params():
+    """PARAM_HINTS dict in brew.py contains entries for all Phase 20 espresso params."""
+    from app.routers.brew import PARAM_HINTS
+
+    phase20_params = [
+        "preinfusion_time",
+        "preinfusion_pressure",
+        "brew_pressure",
+        "pressure_profile",
+        "flow_rate",
+        "bloom_pause",
+        "temp_profile",
+        "brew_mode",
+        "saturation",
+    ]
+    for param in phase20_params:
+        assert param in PARAM_HINTS, f"PARAM_HINTS missing hint for '{param}'"
+        assert len(PARAM_HINTS[param]) > 10, f"Hint for '{param}' too short: {PARAM_HINTS[param]!r}"
+
+
+def test_show_best_context_includes_param_defs(active_client, sample_bean, db_session):
+    """GET /brew/best passes param_defs to template (dynamic hidden inputs)."""
+    _seed_measurement(db_session, sample_bean.id, taste=8.0)
+
+    response = active_client.get("/brew/best")
+    assert response.status_code == 200
+    # Dynamic loop produces hidden inputs driven by param_defs
+    assert 'name="grind_setting"' in response.text
+    assert 'name="temperature"' in response.text
+    assert 'name="dose_in"' in response.text
