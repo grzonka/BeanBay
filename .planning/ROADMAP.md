@@ -56,6 +56,14 @@ Plans:
 - [x] 23-02-PLAN.md — Method-aware brew evaluation + welcome page
 - [x] 23-03-PLAN.md — Setup wizard bug fix + UX polish
 
+### Phase 24: Home Dashboard
+
+**Goal:** Create a home dashboard page for returning users at `/` — showing at-a-glance brew stats, recent brews, active bean info, and quick actions instead of redirecting to the bean list.
+**Plans:** 1 plan
+
+Plans:
+- [ ] 24-01-PLAN.md — Dashboard route + template with stats, recent brews, and quick actions
+
 ---
 
 ## Progress
@@ -76,3 +84,4 @@ Plans:
 | 21 | v0.3.0 | 1/1 | Complete | 2026-02-26 |
 | 22 | v0.3.0 | 6/6 | Complete | 2026-02-26 |
 | 23 | v0.3.0 Fixes | 3/3 | Complete | 2026-02-26 |
+| 24 | Home Dashboard | 0/1 | In Progress | — |
