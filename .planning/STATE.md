@@ -22,11 +22,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: None — between milestones
-Status: v0.3.0 archived. 408 tests passing. Ready for testing and release.
-Last activity: 2026-02-26 — Archived v0.3.0 milestone (ROADMAP collapsed, PROJECT.md updated)
+Phase: 23-v030-pre-release-fixes (Plan 1 of 3 complete)
+Status: In progress — plan 23-01 complete (history setup filter + recipe card icon fixes)
+Last activity: 2026-02-26 — Completed 23-01-PLAN.md (history filtering + info icon polish)
 
-Progress: All 5 milestones shipped (46 plans across 22 phases)
+Progress: All 5 milestones shipped (46 plans across 22 phases) + phase 23 in progress (1/3 plans done)
 
 ## Performance Metrics
 
@@ -140,6 +140,11 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 - **TYPE_CHECKING guard for Bean/Session imports in optimizer.py:** Avoids circular import at module load time; type hints only, not runtime
 - **None return when no training data:** Even with matching similar_beans, if no actual DB measurements exist for those beans, returns None gracefully
 
+### Phase 23 Plan 01 Key Decisions
+- **Setup filter queries active setups only:** `BrewSetup.is_retired == False` — retired setups hidden from history filter even if historical shots reference them
+- **param-info-icon uses primary amber (oklch 65% 0.122 54):** Matches `--color-primary`; 14px circular badge with italic bold "i" replaces near-invisible SVG
+- **hx-include cross-filter pattern:** Each dropdown's `hx-include` references all sibling filter names so changing one dropdown reloads shots respecting others
+
 ### Phase 22 Plan 06 Key Decisions
 - **Custom espresso theme over daisyUI built-in coffee:** Built-in coffee theme had wrong palette; custom theme defined in `@plugin daisyui-theme.mjs` block to exactly match original hand-rolled CSS colors
 - **oklch chroma boosted 3x from exact hex conversion:** Exact hex→oklch gives chroma ~0.010 for dark browns, which looks grey at low luminance. Human eye needs ~0.030 chroma for warmth to be perceptible.
@@ -193,13 +198,13 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-26
-- **What happened:** Archived v0.3.0 milestone. ROADMAP.md collapsed into `<details>`. PROJECT.md updated (v0.3.0 moved from Active to Completed, current state updated). STATE.md reflects between-milestones status.
-- **Where we left off:** v0.3.0 archived. User will test the app, then release (git tag, Docker image).
+- **What happened:** Completed plan 23-01. Added brew setup filtering to history page (three-way filter: bean, setup, min taste). Replaced near-invisible SVG info icons on recipe cards with visible amber circular "i" badge (.param-info-icon). 408/408 tests passing.
+- **Where we left off:** Plan 23-01 complete. Plans 23-02 and 23-03 remaining in phase 23.
 
 ### Next Steps
-1. User tests the app manually
-2. v0.3.0 release (git tag, Docker image, changelog)
-3. Plan next milestone (v0.4.0 or similar)
+1. Execute plan 23-02 (brew evaluation method-awareness — already committed separately)
+2. Execute plan 23-03 (remaining pre-release fixes)
+3. v0.3.0 release (git tag, Docker image, changelog)
 
 ---
 *State initialized: 2026-02-21*
