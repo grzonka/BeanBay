@@ -1,4 +1,4 @@
-"""History routes — shot history list with bean and taste score filters."""
+"""History routes — shot history list with bean, setup and taste score filters."""
 
 import json
 from typing import Optional
@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.bean import Bean
+from app.models.brew_setup import BrewSetup
 from app.models.measurement import Measurement
 from app.routers.beans import _get_active_bean
 
@@ -23,7 +24,10 @@ def _is_htmx(request: Request) -> bool:
 
 
 def _build_shot_dicts(
-    db: Session, bean_id: Optional[str], min_taste: Optional[float]
+    db: Session,
+    bean_id: Optional[str],
+    min_taste: Optional[float],
+    setup_id: Optional[str] = None,
 ) -> list[dict]:
     """Query measurements with optional filters, return enriched dicts."""
     query = (
@@ -36,6 +40,8 @@ def _build_shot_dicts(
         query = query.filter(Measurement.bean_id == bean_id)
     if min_taste is not None:
         query = query.filter(Measurement.taste >= min_taste)
+    if setup_id:
+        query = query.filter(Measurement.brew_setup_id == setup_id)
 
     measurements = query.order_by(Measurement.created_at.desc()).all()
 
@@ -139,21 +145,27 @@ async def history_page(
     request: Request,
     bean_id: Optional[str] = None,
     min_taste: Optional[float] = None,
+    setup_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """Full history page."""
     active_bean = _get_active_bean(request, db)
     beans = db.query(Bean).order_by(Bean.name).all()
-    shots = _build_shot_dicts(db, bean_id, min_taste)
+    setups = (
+        db.query(BrewSetup).filter(BrewSetup.is_retired.is_(False)).order_by(BrewSetup.name).all()
+    )
+    shots = _build_shot_dicts(db, bean_id, min_taste, setup_id)
 
     return templates.TemplateResponse(
         request,
         "history/index.html",
         {
             "beans": beans,
+            "setups": setups,
             "shots": shots,
             "active_bean": active_bean,
             "filter_bean_id": bean_id,
+            "filter_setup_id": setup_id,
             "filter_min_taste": int(min_taste)
             if min_taste and min_taste == int(min_taste)
             else min_taste,
@@ -166,10 +178,11 @@ async def history_shots_partial(
     request: Request,
     bean_id: Optional[str] = None,
     min_taste: Optional[float] = None,
+    setup_id: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """htmx partial — filtered shot list only."""
-    shots = _build_shot_dicts(db, bean_id, min_taste)
+    shots = _build_shot_dicts(db, bean_id, min_taste, setup_id)
 
     return templates.TemplateResponse(
         request,
