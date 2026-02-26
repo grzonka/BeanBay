@@ -1,7 +1,7 @@
 # Project State: BeanBay
 
-**Last updated:** 2026-02-26
-**Current phase:** None — between milestones
+**Last updated:** 2026-02-27
+**Current phase:** 25-ux-bean-flow
 
 ## Project Reference
 
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 25-ux-bean-flow (Plan 0 of 2 complete — executing)
+Phase: 25-ux-bean-flow (Plan 1 of 2 complete)
 Status: Phase 25 in progress — UX bean flow polish
-Last activity: 2026-02-27 — Phase 25 plans written, executing
+Last activity: 2026-02-27 — Completed 25-01-PLAN.md (sidebar cleanup + insights bean picker)
 
-Progress: All 5 milestones shipped (46 plans across 22 phases) + phase 23 complete (3/3) + phase 24 complete (1/1) + phase 25 in progress
-Ready for: Phase 25 execution
+Progress: All 5 milestones shipped (46 plans across 22 phases) + phase 23 complete (3/3) + phase 24 complete (1/1) + phase 25 plan 1/2 complete
+Ready for: Phase 25 Plan 02 execution (analytics per-bean filter + history filter visible)
 
 ## Performance Metrics
 
@@ -40,6 +40,12 @@ Ready for: Phase 25 execution
 
 ### Key Technical Decisions
 See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
+
+### Phase 25 Plan 01 Key Decisions
+- **Sidebar active-bean indicator removed:** Nav is now navigation-only; `active_bean` variable kept in route contexts for brew page and dashboard (those still use it)
+- **Insights: no redirect when no bean, graceful empty state:** Redirect-to-/beans was a UX dead-end; now renders picker prompt immediately
+- **bean_id query param with cookie fallback on insights:** Explicit URL selection wins over ambient cookie; enables bookmarking specific bean insights
+- **select onchange navigation for bean picker:** No JS dependency needed — native `onchange` fires URL navigation to `/insights?bean_id=`
 
 ### Phase 21 Plan 01 Key Decisions
 - **Temperature hidden (not "N/A") for cold-brew:** `{% if rec.temperature is not none %}` wraps both the ORM and dict paths — cold-brew shots never show "Temp: None°C"; absence is more accurate than a placeholder
@@ -216,14 +222,16 @@ See: .planning/PROJECT.md (Key Decisions table — 22+ decisions tracked)
 
 ### Last Session
 - **Date:** 2026-02-27
-- **What happened:** Phase 25 (UX Bean Flow Polish) planned. Two wave-1 plans: 25-01 (sidebar cleanup, dashboard intro, insights bean picker) and 25-02 (analytics per-bean filter, history filter visible).
-- **Where we left off:** Executing Phase 25 plans.
+- **What happened:** Executed Phase 25 Plan 01. Removed active-bean indicator from sidebar, added dashboard intro paragraph, and added bean picker dropdown to insights page with query param support.
+- **Where we left off:** 25-01 complete (2/2 tasks, 410 tests passing). Phase 25 Plan 02 ready to execute.
+- **Stopped at:** Completed 25-01-PLAN.md
+- **Resume file:** None
 
 ### Next Steps
-1. Execute Phase 25 plans (wave 1, parallel)
-2. Verify Phase 25
+1. Execute Phase 25 Plan 02 (analytics per-bean filter + history filter visible)
+2. Verify Phase 25 complete (both plans done)
 3. v0.3.0 release (git tag, Docker image, changelog)
 
 ---
 *State initialized: 2026-02-21*
-*Last updated: 2026-02-26 — v0.3.0 MILESTONE ARCHIVED*
+*Last updated: 2026-02-27 — Phase 25 Plan 01 complete*
