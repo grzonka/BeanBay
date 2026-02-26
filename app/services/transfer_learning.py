@@ -29,11 +29,7 @@ from sqlalchemy.orm import Session
 from app.models.bean import Bean
 from app.models.brew_setup import BrewSetup
 from app.models.measurement import Measurement
-from app.services.optimizer import (
-    _build_parameters,
-    _get_param_columns,
-    _resolve_bounds,
-)
+from app.services.parameter_registry import build_parameters_for_setup, get_param_columns
 from app.services.similarity import SimilarBean
 
 
@@ -56,7 +52,7 @@ def _collect_training_measurements(
     Returns DataFrame with param columns + "taste" + "bean_task" = bean_id.
     Empty DataFrame if no measurements found.
     """
-    param_cols = _get_param_columns(method)
+    param_cols = get_param_columns(method)
 
     # Query measurements for this bean + method
     query = db.query(Measurement).filter(Measurement.bean_id == bean_id)
@@ -148,8 +144,7 @@ def build_transfer_campaign(
             seen.add(tid)
 
     # Build parameters: TaskParameter first, then method-specific params
-    bounds = _resolve_bounds(overrides, method)
-    recipe_params = _build_parameters(bounds, method)
+    recipe_params = build_parameters_for_setup(method, brewer=None, overrides=overrides)
     task_param = TaskParameter(
         name="bean_task",
         values=unique_task_ids,
@@ -165,7 +160,7 @@ def build_transfer_campaign(
     campaign = Campaign(searchspace=searchspace, objective=objective, recommender=recommender)
 
     # Load training measurements
-    param_cols = _get_param_columns(method)
+    param_cols = get_param_columns(method)
     baybe_cols = ["bean_task"] + param_cols + ["taste"]
     available_cols = [c for c in baybe_cols if c in training_df.columns]
     campaign.add_measurements(training_df[available_cols])
