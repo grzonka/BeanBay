@@ -250,7 +250,7 @@
       id="btn-submit"
       class="btn btn-primary min-h-12 flex-1"
       style="display:none;"
-      onclick="this.classList.add('loading'); this.disabled = true;"
+      onclick="this.classList.add('loading'); setTimeout(() => { this.disabled = true; }, 0);"
     >
       {% if edit_mode %}Save Setup{% else %}Create Setup & Start Brewing →{% endif %}
     </button>
