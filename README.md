@@ -1,5 +1,9 @@
 # BeanBay
 
+> **🌐 Try the demo:** [demo.beanbay.coffee](https://demo.beanbay.coffee)
+>
+> The demo is hosted for feedback purposes only — to evaluate interest in BeanBay as an online offering. Data is not stored long-term and will be purged periodically.
+
 > **⚠️ Work in Progress** — This project is under active development and not yet ready for general use.
 
 **Self-hosted coffee optimization powered by Bayesian learning.**
