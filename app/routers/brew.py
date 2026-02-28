@@ -306,6 +306,7 @@ async def trigger_recommend(request: Request, db: Session = Depends(get_db)):
     campaign_key = _get_campaign_key(bean, active_setup)
     method = _get_method_from_setup(active_setup)
     brewer = active_setup.brewer if active_setup else None
+    grinder = active_setup.grinder if active_setup else None
 
     optimizer = request.app.state.optimizer
 
@@ -324,6 +325,7 @@ async def trigger_recommend(request: Request, db: Session = Depends(get_db)):
         target_bean=bean,
         db=db,
         brewer=brewer,
+        grinder=grinder,
     )
 
     # Compute recommendation insights (explore vs exploit explanation + predicted taste)
@@ -333,6 +335,15 @@ async def trigger_recommend(request: Request, db: Session = Depends(get_db)):
     rec["insights"] = insights
     rec["method"] = method
     rec["setup_id"] = str(active_setup.id) if active_setup else None
+
+    # Format grind_setting for display in native notation (e.g. "2.3.7" for multi-ring)
+    if grinder and hasattr(grinder, "to_display") and "grind_setting" in rec:
+        try:
+            rec["grind_display"] = grinder.to_display(float(rec["grind_setting"]))
+        except (ValueError, TypeError):
+            rec["grind_display"] = str(rec["grind_setting"])
+    elif "grind_setting" in rec:
+        rec["grind_display"] = str(rec["grind_setting"])
 
     # Retrieve transfer metadata (set on first campaign creation if transfer learning applied)
     transfer_metadata = optimizer.get_transfer_metadata(campaign_key)
@@ -367,6 +378,21 @@ async def show_recommendation(
     insights = rec.get("insights", {})
     transfer_metadata = rec.get("transfer_metadata")
 
+    # Resolve grinder from active setup for display formatting
+    active_setup = _get_active_setup(request, db)
+    grinder = active_setup.grinder if active_setup else None
+
+    # Ensure grind_display is present (may already be set by trigger_recommend,
+    # but re-derive for direct-link GET requests)
+    if "grind_display" not in rec and "grind_setting" in rec:
+        if grinder and hasattr(grinder, "to_display"):
+            try:
+                rec["grind_display"] = grinder.to_display(float(rec["grind_setting"]))
+            except (ValueError, TypeError):
+                rec["grind_display"] = str(rec["grind_setting"])
+        else:
+            rec["grind_display"] = str(rec["grind_setting"])
+
     # Pass param_defs for generic hidden input rendering in template
     param_defs = PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
 
@@ -386,6 +412,7 @@ async def show_recommendation(
             "param_short_labels": PARAM_SHORT_LABELS,
             "param_descriptions": PARAM_DESCRIPTIONS,
             "method": method,
+            "grinder": grinder,
         },
     )
 
@@ -417,9 +444,26 @@ async def record_measurement(
     # Extract all recognized param values from form
     params = _extract_params_from_form(method, form_data)
 
+    # For manual brews, resolve grinder once for display conversion + bounds validation
+    grinder_for_manual = None
+    if is_manual:
+        active_setup_for_grinder = _get_active_setup(request, db)
+        grinder_for_manual = active_setup_for_grinder.grinder if active_setup_for_grinder else None
+
+    # For manual brews with a multi-ring grinder, convert grind_setting from
+    # display notation (e.g. "2.3.7") to linear value before storing.
+    if is_manual and "grind_setting" in params:
+        if grinder_for_manual and hasattr(grinder_for_manual, "from_display"):
+            raw_grind = form_data.get("grind_setting", "")
+            if raw_grind and "." in str(raw_grind) and grinder_for_manual.display_format in ("x.y", "x.y.z"):
+                try:
+                    params["grind_setting"] = grinder_for_manual.from_display(str(raw_grind))
+                except (ValueError, TypeError):
+                    pass  # Fallback: keep the float-parsed value from _extract_params_from_form
+
     # Validate manual brews against bean parameter bounds
     if is_manual:
-        bounds = _resolve_bounds(bean.parameter_overrides, method=method)
+        bounds = _resolve_bounds(bean.parameter_overrides, method=method, grinder=grinder_for_manual)
         violations = []
         for param, value in params.items():
             if param not in bounds:
@@ -525,6 +569,7 @@ async def record_measurement(
         campaign_key = make_campaign_key(str(bean.id), method, brew_setup_id)
         active_setup_for_record = _get_active_setup(request, db)
         brewer_for_record = active_setup_for_record.brewer if active_setup_for_record else None
+        grinder_for_record = active_setup_for_record.grinder if active_setup_for_record else None
         measurement_data = dict(params)
         measurement_data["taste"] = taste
         optimizer.add_measurement(
@@ -534,6 +579,7 @@ async def record_measurement(
             method=method,
             target_bean_id=str(bean.id),
             brewer=brewer_for_record,
+            grinder=grinder_for_record,
         )
 
     # Clean up pending recommendation from DB
@@ -552,14 +598,24 @@ async def show_best(request: Request, db: Session = Depends(get_db)):
     active_setup = _get_active_setup(request, db)
     method = _get_method_from_setup(active_setup)
     brewer = active_setup.brewer if active_setup else None
+    grinder = active_setup.grinder if active_setup else None
 
     best = _best_measurement(bean.id, db)
 
     ratio = None
     best_session_id = None
+    grind_display = None
     if best:
         ratio = _brew_ratio(best.dose_in, best.target_yield)
         best_session_id = str(uuid.uuid4())
+        # Format grind_setting for display
+        if grinder and hasattr(grinder, "to_display") and best.grind_setting is not None:
+            try:
+                grind_display = grinder.to_display(float(best.grind_setting))
+            except (ValueError, TypeError):
+                grind_display = str(best.grind_setting)
+        elif best.grind_setting is not None:
+            grind_display = str(best.grind_setting)
 
     # Get param_defs filtered by brewer capabilities for dynamic hidden input rendering
     from app.services.parameter_registry import get_param_columns
@@ -583,6 +639,8 @@ async def show_best(request: Request, db: Session = Depends(get_db)):
             "param_short_labels": PARAM_SHORT_LABELS,
             "param_descriptions": PARAM_DESCRIPTIONS,
             "method": method,
+            "grinder": grinder,
+            "grind_display": grind_display,
         },
     )
 
@@ -597,7 +655,8 @@ async def manual_brew(request: Request, db: Session = Depends(get_db)):
     active_setup = _get_active_setup(request, db)
     method = _get_method_from_setup(active_setup)
     brewer = active_setup.brewer if active_setup else None
-    bounds = _resolve_bounds(bean.parameter_overrides, method=method)
+    grinder = active_setup.grinder if active_setup else None
+    bounds = _resolve_bounds(bean.parameter_overrides, method=method, grinder=grinder)
     best = _best_measurement(bean.id, db)
 
     # Get the active param columns for this method+brewer combo
@@ -642,6 +701,14 @@ async def manual_brew(request: Request, db: Session = Depends(get_db)):
     manual_session_id = str(uuid.uuid4())
     setup_id = str(active_setup.id) if active_setup else None
 
+    # Format prefill grind_setting for display if grinder has multi-ring format
+    grind_display_prefill = None
+    if "grind_setting" in prefill and grinder and hasattr(grinder, "to_display"):
+        try:
+            grind_display_prefill = grinder.to_display(float(prefill["grind_setting"]))
+        except (ValueError, TypeError):
+            grind_display_prefill = str(prefill["grind_setting"])
+
     return templates.TemplateResponse(
         request,
         "brew/manual.html",
@@ -649,10 +716,12 @@ async def manual_brew(request: Request, db: Session = Depends(get_db)):
             "active_bean": bean,
             "active_setup": active_setup,
             "brewer": brewer,
+            "grinder": grinder,
             "method": method,
             "setup_id": setup_id,
             "bounds": bounds,
             "prefill": prefill,
+            "grind_display_prefill": grind_display_prefill,
             "manual_session_id": manual_session_id,
             "param_defs": param_defs,
             "param_labels": PARAM_LABELS,
@@ -747,6 +816,7 @@ async def rebuild_campaign_route(
 
     active_setup = _get_active_setup(request, db)
     brewer = active_setup.brewer if active_setup else None
+    grinder = active_setup.grinder if active_setup else None
 
     optimizer = request.app.state.optimizer
     optimizer.accept_rebuild(
@@ -754,6 +824,7 @@ async def rebuild_campaign_route(
         method=method,
         brewer=brewer,
         overrides=bean.parameter_overrides,
+        grinder=grinder,
     )
 
     # Redirect to trigger a fresh recommendation with the new params

@@ -119,11 +119,22 @@ def _compute_comparison(db: Session) -> list[dict]:
         best = max(non_failed, key=lambda m: m.taste)
         shot_count = len(db.query(Measurement).filter(Measurement.bean_id == bean.id).all())
 
+        # Format grind_setting in native notation using the shot's setup grinder
+        grind_display = str(best.grind_setting) if best.grind_setting is not None else None
+        if best.brew_setup and best.brew_setup.grinder and best.grind_setting is not None:
+            grinder = best.brew_setup.grinder
+            if hasattr(grinder, "to_display"):
+                try:
+                    grind_display = grinder.to_display(float(best.grind_setting))
+                except (ValueError, TypeError):
+                    pass
+
         comparison.append(
             {
                 "bean_name": bean.name,
                 "taste": best.taste,
                 "grind_setting": best.grind_setting,
+                "grind_display": grind_display,
                 "temperature": best.temperature,
                 "preinfusion_pressure_pct": best.preinfusion_pressure_pct,
                 "dose_in": best.dose_in,

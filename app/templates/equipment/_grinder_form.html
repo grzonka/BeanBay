@@ -29,73 +29,144 @@
   </div>
 
   <div class="form-control mb-4">
-    <label class="label"><span class="label-text">Dial Type</span></label>
-    <div class="flex gap-2" id="dial-type-group">
-      <label class="flex-1 flex items-center justify-center gap-2 min-h-12 border-2 border-base-300 rounded-lg cursor-pointer p-2 has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+    <label class="label"><span class="label-text">Display Format</span></label>
+    <select
+      name="display_format"
+      id="display-format"
+      class="select select-bordered w-full"
+      onchange="updateRingFields()"
+    >
+      <option value="decimal" {% if not grinder or grinder.display_format == 'decimal' %}selected{% endif %}>Decimal (e.g. 15.5)</option>
+      <option value="x.y" {% if grinder and grinder.display_format == 'x.y' %}selected{% endif %}>X.Y (e.g. 3.2)</option>
+      <option value="x.y.z" {% if grinder and grinder.display_format == 'x.y.z' %}selected{% endif %}>X.Y.Z (e.g. 2.3.5)</option>
+    </select>
+  </div>
+
+  {# Decimal format — single ring #}
+  <div id="ring-decimal" class="ring-section">
+    <div class="flex gap-2 mb-4">
+      <div class="form-control flex-1">
+        <label class="label"><span class="label-text">Min</span></label>
         <input
-          type="radio"
-          name="dial_type"
-          value="stepless"
-          class="radio radio-primary"
-          {% if not grinder or grinder.dial_type == 'stepless' %}checked{% endif %}
-          onchange="updateDialFields()"
+          type="number"
+          name="ring_min"
+          class="input input-bordered w-full"
+          step="any"
+          placeholder="e.g. 0"
+          value="{{ grinder.ring_sizes[0][0] if grinder and grinder.ring_sizes else '' }}"
         >
-        Stepless
-      </label>
-      <label class="flex-1 flex items-center justify-center gap-2 min-h-12 border-2 border-base-300 rounded-lg cursor-pointer p-2 has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+      </div>
+      <div class="form-control flex-1">
+        <label class="label"><span class="label-text">Max</span></label>
         <input
-          type="radio"
-          name="dial_type"
-          value="stepped"
-          class="radio radio-primary"
-          {% if grinder and grinder.dial_type == 'stepped' %}checked{% endif %}
-          onchange="updateDialFields()"
+          type="number"
+          name="ring_max"
+          class="input input-bordered w-full"
+          step="any"
+          placeholder="e.g. 40"
+          value="{{ grinder.ring_sizes[0][1] if grinder and grinder.ring_sizes else '' }}"
         >
-        Stepped
-      </label>
+      </div>
+      <div class="form-control flex-1">
+        <label class="label"><span class="label-text">Step</span></label>
+        <input
+          type="number"
+          name="ring_step"
+          class="input input-bordered w-full"
+          step="any"
+          placeholder="empty = continuous"
+          value="{{ grinder.ring_sizes[0][2] if grinder and grinder.ring_sizes and grinder.ring_sizes[0][2] is not none else '' }}"
+        >
+      </div>
     </div>
   </div>
 
-  <div id="stepped-fields" style="display:{% if grinder and grinder.dial_type == 'stepped' %}block{% else %}none{% endif %};">
-    <div class="form-control mb-4">
-      <label class="label"><span class="label-text">Step Size</span></label>
-      <input
-        type="number"
-        id="step-size"
-        name="step_size"
-        class="input input-bordered w-full"
-        step="any"
-        placeholder="e.g. 0.5"
-        value="{{ grinder.step_size if grinder and grinder.step_size is not none else '' }}"
-      >
+  {# X.Y format — two rings #}
+  <div id="ring-xy" class="ring-section" style="display:none;">
+    {% for ring_idx in [0, 1] %}
+    <div class="mb-3">
+      <div class="text-sm font-medium mb-1">Ring {{ ring_idx + 1 }}</div>
+      <div class="flex gap-2">
+        <div class="form-control flex-1">
+          <label class="label"><span class="label-text">Min</span></label>
+          <input
+            type="number"
+            name="ring_{{ ring_idx }}_min"
+            class="input input-bordered w-full"
+            step="any"
+            placeholder="0"
+            value="{{ grinder.ring_sizes[ring_idx][0] if grinder and grinder.ring_sizes and grinder.ring_sizes|length > ring_idx else '' }}"
+          >
+        </div>
+        <div class="form-control flex-1">
+          <label class="label"><span class="label-text">Max</span></label>
+          <input
+            type="number"
+            name="ring_{{ ring_idx }}_max"
+            class="input input-bordered w-full"
+            step="any"
+            placeholder="10"
+            value="{{ grinder.ring_sizes[ring_idx][1] if grinder and grinder.ring_sizes and grinder.ring_sizes|length > ring_idx else '' }}"
+          >
+        </div>
+        <div class="form-control flex-1">
+          <label class="label"><span class="label-text">Step</span></label>
+          <input
+            type="number"
+            name="ring_{{ ring_idx }}_step"
+            class="input input-bordered w-full"
+            step="any"
+            placeholder="1"
+            value="{{ grinder.ring_sizes[ring_idx][2] if grinder and grinder.ring_sizes and grinder.ring_sizes|length > ring_idx and grinder.ring_sizes[ring_idx][2] is not none else '' }}"
+          >
+        </div>
+      </div>
     </div>
+    {% endfor %}
   </div>
 
-  <div class="flex gap-2 mb-4">
-    <div class="form-control flex-1">
-      <label class="label"><span class="label-text">Min Setting</span></label>
-      <input
-        type="number"
-        id="min-value"
-        name="min_value"
-        class="input input-bordered w-full"
-        step="any"
-        placeholder="e.g. 0"
-        value="{{ grinder.min_value if grinder and grinder.min_value is not none else '' }}"
-      >
+  {# X.Y.Z format — three rings #}
+  <div id="ring-xyz" class="ring-section" style="display:none;">
+    {% for ring_idx in [0, 1, 2] %}
+    <div class="mb-3">
+      <div class="text-sm font-medium mb-1">Ring {{ ring_idx + 1 }}</div>
+      <div class="flex gap-2">
+        <div class="form-control flex-1">
+          <label class="label"><span class="label-text">Min</span></label>
+          <input
+            type="number"
+            name="ring_{{ ring_idx }}_min"
+            class="input input-bordered w-full"
+            step="any"
+            placeholder="0"
+            value="{{ grinder.ring_sizes[ring_idx][0] if grinder and grinder.ring_sizes and grinder.ring_sizes|length > ring_idx else '' }}"
+          >
+        </div>
+        <div class="form-control flex-1">
+          <label class="label"><span class="label-text">Max</span></label>
+          <input
+            type="number"
+            name="ring_{{ ring_idx }}_max"
+            class="input input-bordered w-full"
+            step="any"
+            placeholder="10"
+            value="{{ grinder.ring_sizes[ring_idx][1] if grinder and grinder.ring_sizes and grinder.ring_sizes|length > ring_idx else '' }}"
+          >
+        </div>
+        <div class="form-control flex-1">
+          <label class="label"><span class="label-text">Step</span></label>
+          <input
+            type="number"
+            name="ring_{{ ring_idx }}_step"
+            class="input input-bordered w-full"
+            step="any"
+            placeholder="1"
+            value="{{ grinder.ring_sizes[ring_idx][2] if grinder and grinder.ring_sizes and grinder.ring_sizes|length > ring_idx and grinder.ring_sizes[ring_idx][2] is not none else '' }}"
+          >
+        </div>
+      </div>
     </div>
-    <div class="form-control flex-1">
-      <label class="label"><span class="label-text">Max Setting</span></label>
-      <input
-        type="number"
-        id="max-value"
-        name="max_value"
-        class="input input-bordered w-full"
-        step="any"
-        placeholder="e.g. 40"
-        value="{{ grinder.max_value if grinder and grinder.max_value is not none else '' }}"
-      >
-    </div>
+    {% endfor %}
   </div>
 
   <button type="submit" class="btn btn-primary w-full min-h-12">
@@ -104,8 +175,17 @@
 </form>
 
 <script>
-  function updateDialFields() {
-    var stepped = document.querySelector('input[name="dial_type"][value="stepped"]').checked;
-    document.getElementById('stepped-fields').style.display = stepped ? 'block' : 'none';
+  function updateRingFields() {
+    var fmt = document.getElementById('display-format').value;
+    document.querySelectorAll('.ring-section').forEach(function(el) { el.style.display = 'none'; });
+    if (fmt === 'x.y') {
+      document.getElementById('ring-xy').style.display = 'block';
+    } else if (fmt === 'x.y.z') {
+      document.getElementById('ring-xyz').style.display = 'block';
+    } else {
+      document.getElementById('ring-decimal').style.display = 'block';
+    }
   }
+  // Initialize on load
+  updateRingFields();
 </script>

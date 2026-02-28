@@ -38,6 +38,33 @@ def _parse_float(value: str) -> Optional[float]:
         return None
 
 
+def _parse_ring_sizes(display_format: str, form) -> list:
+    """Build ring_sizes list from form data based on display_format.
+
+    For 'decimal' format: reads ring_min, ring_max, ring_step (step empty = None = continuous).
+    For 'x.y' format: reads ring_0_min/max/step and ring_1_min/max/step.
+    For 'x.y.z' format: same pattern for 3 rings.
+    """
+    if display_format == "x.y":
+        ring_count = 2
+    elif display_format == "x.y.z":
+        ring_count = 3
+    else:
+        # decimal — single ring
+        ring_min = _parse_float(form.get("ring_min", "")) or 0.0
+        ring_max = _parse_float(form.get("ring_max", "")) or 50.0
+        ring_step = _parse_float(form.get("ring_step", ""))
+        return [[ring_min, ring_max, ring_step]]
+
+    rings = []
+    for i in range(ring_count):
+        r_min = _parse_float(form.get(f"ring_{i}_min", "")) or 0.0
+        r_max = _parse_float(form.get(f"ring_{i}_max", "")) or 50.0
+        r_step = _parse_float(form.get(f"ring_{i}_step", ""))
+        rings.append([r_min, r_max, r_step])
+    return rings
+
+
 @router.get("", response_class=HTMLResponse)
 async def equipment_index(
     request: Request,
@@ -115,19 +142,17 @@ async def equipment_index(
 async def create_grinder(
     request: Request,
     name: str = Form(...),
-    dial_type: str = Form("stepless"),
-    step_size: str = Form(""),
-    min_value: str = Form(""),
-    max_value: str = Form(""),
+    display_format: str = Form("decimal"),
     db: Session = Depends(get_db),
 ):
-    """Create a new grinder."""
+    """Create a new grinder with ring-based dial configuration."""
+    form = await request.form()
+    ring_sizes = _parse_ring_sizes(display_format, form)
+
     grinder = Grinder(
         name=name.strip(),
-        dial_type=dial_type,
-        step_size=_parse_float(step_size) if dial_type == "stepped" else None,
-        min_value=_parse_float(min_value),
-        max_value=_parse_float(max_value),
+        display_format=display_format,
+        ring_sizes=ring_sizes,
     )
     db.add(grinder)
     db.commit()
@@ -166,10 +191,7 @@ async def update_grinder(
     request: Request,
     grinder_id: str,
     name: str = Form(...),
-    dial_type: str = Form("stepless"),
-    step_size: str = Form(""),
-    min_value: str = Form(""),
-    max_value: str = Form(""),
+    display_format: str = Form("decimal"),
     db: Session = Depends(get_db),
 ):
     """Update an existing grinder."""
@@ -177,11 +199,12 @@ async def update_grinder(
     if not grinder:
         return RedirectResponse(url="/equipment", status_code=303)
 
+    form = await request.form()
+    ring_sizes = _parse_ring_sizes(display_format, form)
+
     grinder.name = name.strip()
-    grinder.dial_type = dial_type
-    grinder.step_size = _parse_float(step_size) if dial_type == "stepped" else None
-    grinder.min_value = _parse_float(min_value)
-    grinder.max_value = _parse_float(max_value)
+    grinder.display_format = display_format
+    grinder.ring_sizes = ring_sizes
     db.commit()
 
     return RedirectResponse(url="/equipment", status_code=303)

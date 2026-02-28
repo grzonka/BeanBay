@@ -16,7 +16,7 @@
       <span class="text-lg font-bold {% if shot.is_failed %}text-error{% endif %}">
         {{ shot.taste }}/10
       </span>
-      <span class="text-sm text-base-content/70">Grind {{ shot.grind_setting }}</span>
+      <span class="text-sm text-base-content/70">Grind {{ shot.grind_display if shot.grind_display is defined and shot.grind_display else shot.grind_setting }}</span>
       <span class="text-sm text-base-content/40 truncate">{{ shot.bean_name }}</span>
     </div>
   </div>

@@ -48,7 +48,7 @@ from baybe.parameters import CategoricalParameter, NumericalContinuousParameter
 
 # ---------------------------------------------------------------------------
 # Grind range percentages per brew method
-# Expressed as (low_pct, high_pct) of the grinder's full range (min_value..max_value)
+# Expressed as (low_pct, high_pct) of the grinder's linearized range
 # ---------------------------------------------------------------------------
 METHOD_GRIND_PERCENTAGES: dict[str, tuple[float, float]] = {
     "espresso": (0.15, 0.40),
@@ -542,6 +542,7 @@ def build_parameters_for_setup(
     method: str,
     brewer: Any = None,
     overrides: dict[str, dict[str, float]] | None = None,
+    grinder: Any = None,
 ) -> list:
     """Build BayBE parameter objects for the given method and brewer.
 
@@ -549,15 +550,25 @@ def build_parameters_for_setup(
     new campaigns.  Existing serialised campaigns with legacy params in their searchspace
     continue to work via Campaign.from_json() without going through this function.
 
+    Priority for grind_setting bounds:
+      registry defaults -> bean overrides -> grinder clips (hard ceiling)
+
     Args:
         method: Brew method (e.g. "espresso", "pour-over").
         brewer: Brewer ORM instance for capability gating, or None for backward compat.
         overrides: Per-param bound overrides, e.g. {"grind_setting": {"min": 18.0, "max": 22.0}}.
+        grinder: Grinder ORM instance for physical range clipping, or None.
 
     Returns:
         List of BayBE parameter objects (NumericalContinuousParameter or CategoricalParameter).
     """
     param_defs = PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
+
+    # Pre-compute grinder linear bounds for grind_setting clipping
+    grinder_bounds = None
+    if grinder is not None:
+        if hasattr(grinder, "linear_bounds") and callable(grinder.linear_bounds):
+            grinder_bounds = grinder.linear_bounds()
 
     parameters = []
     for pdef in param_defs:
@@ -586,6 +597,13 @@ def build_parameters_for_setup(
                 if isinstance(spec, dict):
                     lo = spec.get("min", lo)
                     hi = spec.get("max", hi)
+
+            # Clip grind_setting to grinder's physical range (hard ceiling)
+            if name == "grind_setting" and grinder_bounds is not None:
+                grinder_min, grinder_max = grinder_bounds
+                lo = max(lo, grinder_min)
+                hi = min(hi, grinder_max)
+
             parameters.append(NumericalContinuousParameter(name=name, bounds=(lo, hi)))
 
     return parameters
@@ -667,10 +685,11 @@ def suggest_grind_range(grinder: Any, method: str) -> tuple[float, float] | None
     """Suggest a grind setting range for the given grinder and brew method.
 
     Uses METHOD_GRIND_PERCENTAGES to compute the range as a fraction of the
-    grinder's full range (grinder.min_value .. grinder.max_value).
+    grinder's linearized bounds (from grinder.linear_bounds()).
 
     Args:
-        grinder: Grinder ORM instance with min_value and max_value attributes.
+        grinder: Grinder ORM instance with linear_bounds() method (or legacy
+                 min_value/max_value attributes for backward compatibility).
         method: Brew method name.
 
     Returns:
@@ -679,12 +698,21 @@ def suggest_grind_range(grinder: Any, method: str) -> tuple[float, float] | None
     if grinder is None:
         return None
 
-    lo_val = getattr(grinder, "min_value", None)
-    hi_val = getattr(grinder, "max_value", None)
+    # Use linear_bounds() if available (new model), fall back to legacy attrs
+    bounds = None
+    if hasattr(grinder, "linear_bounds") and callable(grinder.linear_bounds):
+        bounds = grinder.linear_bounds()
+    if bounds is None:
+        # Fallback for mock objects / backward compatibility
+        lo_val = getattr(grinder, "min_value", None)
+        hi_val = getattr(grinder, "max_value", None)
+        if lo_val is not None and hi_val is not None:
+            bounds = (lo_val, hi_val)
 
-    if lo_val is None or hi_val is None:
+    if bounds is None:
         return None
 
+    lo_val, hi_val = bounds
     grind_range = hi_val - lo_val
     if grind_range <= 0:
         return None

@@ -54,12 +54,24 @@ def _build_shot_dicts(
                 tags = json.loads(m.flavor_tags)
             except (ValueError, TypeError):
                 tags = []
+
+        # Format grind_setting in native notation using the shot's setup grinder
+        grind_display = str(m.grind_setting) if m.grind_setting is not None else None
+        if m.brew_setup and m.brew_setup.grinder and m.grind_setting is not None:
+            grinder = m.brew_setup.grinder
+            if hasattr(grinder, "to_display"):
+                try:
+                    grind_display = grinder.to_display(float(m.grind_setting))
+                except (ValueError, TypeError):
+                    pass
+
         shots.append(
             {
                 "id": m.id,
                 "created_at": m.created_at,
                 "taste": m.taste,
                 "grind_setting": m.grind_setting,
+                "grind_display": grind_display,
                 "is_failed": m.is_failed,
                 "is_manual": getattr(m, "is_manual", False) or False,
                 "notes": m.notes,
@@ -97,11 +109,22 @@ def _load_shot_detail(shot_id: int, db: Session) -> dict:
         except (ValueError, TypeError):
             tags = []
 
+    # Format grind_setting in native notation using the shot's setup grinder
+    grind_display = str(m.grind_setting) if m.grind_setting is not None else None
+    if m.brew_setup and m.brew_setup.grinder and m.grind_setting is not None:
+        grinder = m.brew_setup.grinder
+        if hasattr(grinder, "to_display"):
+            try:
+                grind_display = grinder.to_display(float(m.grind_setting))
+            except (ValueError, TypeError):
+                pass
+
     return {
         "id": m.id,
         "created_at": m.created_at,
         "taste": m.taste,
         "grind_setting": m.grind_setting,
+        "grind_display": grind_display,
         "temperature": m.temperature,
         "preinfusion_pressure_pct": m.preinfusion_pressure_pct,
         "dose_in": m.dose_in,
@@ -294,11 +317,22 @@ async def shot_edit_save(
     )
 
     # Build plain row dict (matching _build_shot_dicts structure)
+    # Format grind_setting in native notation for the row
+    row_grind_display = str(m.grind_setting) if m.grind_setting is not None else None
+    if m.brew_setup and m.brew_setup.grinder and m.grind_setting is not None:
+        grinder = m.brew_setup.grinder
+        if hasattr(grinder, "to_display"):
+            try:
+                row_grind_display = grinder.to_display(float(m.grind_setting))
+            except (ValueError, TypeError):
+                pass
+
     row_shot = {
         "id": m.id,
         "created_at": m.created_at,
         "taste": m.taste,
         "grind_setting": m.grind_setting,
+        "grind_display": row_grind_display,
         "is_failed": m.is_failed,
         "is_manual": getattr(m, "is_manual", False) or False,
         "notes": m.notes,

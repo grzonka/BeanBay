@@ -102,6 +102,32 @@
         {% set pmax = bounds[pname][1] %}
         {% set pstep = pdef.rounding if pdef.rounding else 1.0 %}
         {% set pval = prefill[pname] if pname in prefill else ((pmin + pmax) / 2) %}
+
+        {# Special handling for grind_setting with multi-ring grinder #}
+        {% if pname == 'grind_setting' and grinder is defined and grinder and grinder.display_format is defined and grinder.display_format in ('x.y', 'x.y.z') %}
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text">{{ plabel }}{{ info_icon(pname) }}
+              <span class="text-xs text-base-content/50 ml-1">({{ grinder.display_format }} format)</span>
+            </span>
+            {% set display_min = grinder.to_display(pmin) %}
+            {% set display_max = grinder.to_display(pmax) %}
+            <span class="label-text-alt">({{ display_min }}–{{ display_max }})</span>
+          </label>
+          <input
+            type="text"
+            class="input input-bordered w-full"
+            id="{{ pname }}"
+            name="{{ pname }}"
+            value="{{ grind_display_prefill if grind_display_prefill else pval }}"
+            placeholder="e.g. {{ grinder.display_format | replace('x', '2') | replace('y', '3') | replace('z', '7') }}"
+            data-param="{{ pname }}"
+          >
+          <label class="label">
+            <span class="label-text-alt text-base-content/50">Enter in {{ grinder.display_format }} notation (e.g. {{ grinder.display_format | replace('x', '2') | replace('y', '3') | replace('z', '7') }})</span>
+          </label>
+        </div>
+        {% else %}
         <div class="form-control mb-4">
           <label class="label">
             <span class="label-text">{{ plabel }}{{ info_icon(pname) }}</span>
@@ -132,6 +158,7 @@
             >
           </div>
         </div>
+        {% endif %}
         {% endif %}
 
         {% endif %}
