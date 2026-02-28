@@ -43,7 +43,7 @@
   </div>
 
   {# Decimal format — single ring #}
-  <div id="ring-decimal" class="ring-section">
+  <div id="ring-decimal" class="ring-section" {% if grinder and grinder.display_format != 'decimal' %}style="display:none;"{% endif %}>
     <div class="flex gap-2 mb-4">
       <div class="form-control flex-1">
         <label class="label"><span class="label-text">Min</span></label>
@@ -82,7 +82,7 @@
   </div>
 
   {# X.Y format — two rings #}
-  <div id="ring-xy" class="ring-section" style="display:none;">
+  <div id="ring-xy" class="ring-section" {% if not grinder or grinder.display_format != 'x.y' %}style="display:none;"{% endif %}>
     {% for ring_idx in [0, 1] %}
     <div class="mb-3">
       <div class="text-sm font-medium mb-1">Ring {{ ring_idx + 1 }}</div>
@@ -126,7 +126,7 @@
   </div>
 
   {# X.Y.Z format — three rings #}
-  <div id="ring-xyz" class="ring-section" style="display:none;">
+  <div id="ring-xyz" class="ring-section" {% if not grinder or grinder.display_format != 'x.y.z' %}style="display:none;"{% endif %}>
     {% for ring_idx in [0, 1, 2] %}
     <div class="mb-3">
       <div class="text-sm font-medium mb-1">Ring {{ ring_idx + 1 }}</div>

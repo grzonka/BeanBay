@@ -28,13 +28,28 @@ def test_grind_setting_clipped_to_grinder_range():
     assert grind_param.bounds.lower >= 0.0
 
 
-def test_grind_setting_clipped_preserves_method_lower_bound():
-    """If grinder range wider than method default, use method default."""
+def test_grind_setting_uses_percentage_range_with_grinder():
+    """With a grinder, grind bounds come from METHOD_GRIND_PERCENTAGES, not registry defaults."""
+    # Grinder 0-100, espresso percentages are (0.15, 0.40) → (15.0, 40.0)
     grinder = Grinder(name="Wide", display_format="decimal", ring_sizes=[[0, 100, None]])
     params = build_parameters_for_setup("espresso", grinder=grinder)
     grind_param = next(p for p in params if p.name == "grind_setting")
-    assert grind_param.bounds.lower == 15.0  # espresso default
-    assert grind_param.bounds.upper == 25.0  # espresso default
+    assert grind_param.bounds.lower == 15.0  # 0.15 * 100
+    assert grind_param.bounds.upper == 40.0  # 0.40 * 100
+
+
+def test_multi_ring_grinder_pour_over_range():
+    """Multi-ring grinder should get pour-over range from percentages, not registry defaults."""
+    # X-Ultra: 330 total steps (0-329), pour-over percentages (0.40, 0.70)
+    grinder = Grinder(
+        name="X-Ultra", display_format="x.y.z",
+        ring_sizes=[[0, 4, 1], [0, 5, 1], [0, 10, 1]],
+    )
+    params = build_parameters_for_setup("pour-over", grinder=grinder)
+    grind_param = next(p for p in params if p.name == "grind_setting")
+    # 0.40 * 329 ≈ 131.6, 0.70 * 329 ≈ 230.3
+    assert grind_param.bounds.lower > 100  # NOT 15.0 from registry
+    assert grind_param.bounds.upper > 200  # NOT 40.0 from registry
 
 
 def test_grind_setting_with_override_and_grinder():
@@ -112,12 +127,14 @@ def test_fingerprint_same_when_same_grinder():
     assert fp_1 == fp_2
 
 
-def test_resolve_bounds_clips_grind_to_grinder():
-    """_resolve_bounds should clip grind_setting to grinder's physical range."""
+def test_resolve_bounds_uses_suggested_range_with_grinder():
+    """_resolve_bounds should use percentage-based range with grinder, clipped to physical limits."""
     grinder = Grinder(name="Narrow", display_format="decimal", ring_sizes=[[0, 18, 1]])
     bounds = _resolve_bounds(None, "espresso", grinder=grinder)
-    # Espresso default grind is (15, 25), grinder max is 18 -> (15, 18)
-    assert bounds["grind_setting"] == (15.0, 18.0)
+    # Espresso percentages (0.15, 0.40) on range 0-18 → (2.7, 7.2)
+    lo, hi = bounds["grind_setting"]
+    assert lo < 15.0  # NOT registry default
+    assert hi <= 18.0  # Clipped to grinder max
 
 
 def test_resolve_bounds_no_grinder_preserves_defaults():

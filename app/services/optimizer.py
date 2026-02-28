@@ -105,9 +105,19 @@ def _resolve_bounds(
             if param in bounds and isinstance(spec, dict):
                 lo, hi = bounds[param]
                 bounds[param] = (spec.get("min", lo), spec.get("max", hi))
-    # Clip grind_setting to grinder's physical range
+    # For grind_setting with a grinder: use percentage-based suggested range,
+    # then clip to physical limits.
     if grinder is not None and "grind_setting" in bounds:
-        grinder_bounds = grinder.linear_bounds() if hasattr(grinder, 'linear_bounds') else None
+        from app.services.parameter_registry import suggest_grind_range
+
+        suggested = suggest_grind_range(grinder, method)
+        if suggested is not None:
+            # Use suggested range unless bean overrides were applied
+            has_grind_override = overrides and "grind_setting" in overrides
+            if not has_grind_override:
+                bounds["grind_setting"] = suggested
+        # Always clip to grinder's physical limits
+        grinder_bounds = grinder.linear_bounds() if hasattr(grinder, "linear_bounds") else None
         if grinder_bounds is not None:
             g_lo, g_hi = grinder_bounds
             lo, hi = bounds["grind_setting"]

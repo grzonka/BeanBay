@@ -740,6 +740,70 @@ def test_record_manual_brew_end_to_end(active_client, sample_bean, db_session):
     assert m.taste == 8.0
 
 
+def test_record_manual_brew_multi_ring_grinder(active_client, sample_bean, db_session):
+    """POST /brew/record with x.y.z grind notation converts to linear value and saves."""
+    from unittest.mock import MagicMock
+
+    from app.models.brew_method import BrewMethod
+    from app.models.brew_setup import BrewSetup
+    from app.models.equipment import Grinder
+
+    mock_optimizer = MagicMock()
+    mock_optimizer.recommend = AsyncMock()
+    app.state.optimizer = mock_optimizer
+
+    # Create a multi-ring grinder and brew setup
+    grinder = Grinder(
+        name="X-Ultra",
+        display_format="x.y.z",
+        ring_sizes=[[0, 4, 1], [0, 5, 1], [0, 10, 1]],
+    )
+    db_session.add(grinder)
+    # Get or create pour-over brew method
+    brew_method = db_session.query(BrewMethod).filter_by(name="pour-over").first()
+    if not brew_method:
+        brew_method = BrewMethod(name="pour-over")
+        db_session.add(brew_method)
+    db_session.flush()
+    setup = BrewSetup(name="Pour Over Setup", brew_method_id=brew_method.id, grinder_id=grinder.id)
+    db_session.add(setup)
+    db_session.commit()
+    db_session.refresh(setup)
+
+    # Set active setup cookie
+    active_client.cookies.set("active_setup_id", str(setup.id))
+
+    rec_id = str(uuid.uuid4())
+    payload = {
+        "recommendation_id": rec_id,
+        "is_manual": "true",
+        "method": "pour-over",
+        "brew_setup_id": str(setup.id),
+        "grind_setting": "2.2.0",  # x.y.z notation → linear = 2*(6*11) + 2*11 + 0 = 154
+        "temperature": "92.0",
+        "dose_in": "15.0",
+        "brew_volume": "255.0",
+        "bloom_weight": "52.0",
+        "taste": "8.5",
+    }
+    response = active_client.post("/brew/record", data=payload, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/brew"
+
+    db_session.expire_all()
+    m = db_session.query(Measurement).filter(Measurement.recommendation_id == rec_id).first()
+    assert m is not None
+    assert m.is_manual is True
+    assert m.grind_setting == 154.0  # Linear value from "2.2.0"
+    assert m.taste == 8.5
+
+    # Verify optimizer.add_measurement was called with the linear value
+    mock_optimizer.add_measurement.assert_called_once()
+    call_args = mock_optimizer.add_measurement.call_args
+    measurement_data = call_args[1]["measurement"] if "measurement" in call_args[1] else call_args[0][1]
+    assert measurement_data["grind_setting"] == 154.0
+
+
 def test_manual_page_shows_bean_bounds(active_client, sample_bean):
     """GET /brew/manual -> shows default parameter bounds in form."""
     response = active_client.get("/brew/manual")

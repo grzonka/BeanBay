@@ -441,9 +441,6 @@ async def record_measurement(
     is_failed_raw = form_data.get("is_failed", "")
     failed = is_failed_raw in ("true", "1", "on")
 
-    # Extract all recognized param values from form
-    params = _extract_params_from_form(method, form_data)
-
     # For manual brews, resolve grinder once for display conversion + bounds validation
     grinder_for_manual = None
     if is_manual:
@@ -451,15 +448,18 @@ async def record_measurement(
         grinder_for_manual = active_setup_for_grinder.grinder if active_setup_for_grinder else None
 
     # For manual brews with a multi-ring grinder, convert grind_setting from
-    # display notation (e.g. "2.3.7") to linear value before storing.
-    if is_manual and "grind_setting" in params:
-        if grinder_for_manual and hasattr(grinder_for_manual, "from_display"):
-            raw_grind = form_data.get("grind_setting", "")
-            if raw_grind and "." in str(raw_grind) and grinder_for_manual.display_format in ("x.y", "x.y.z"):
-                try:
-                    params["grind_setting"] = grinder_for_manual.from_display(str(raw_grind))
-                except (ValueError, TypeError):
-                    pass  # Fallback: keep the float-parsed value from _extract_params_from_form
+    # display notation (e.g. "2.3.7") to linear value BEFORE float parsing,
+    # because "2.3.7" is not a valid float literal.
+    if is_manual and grinder_for_manual and hasattr(grinder_for_manual, "from_display"):
+        raw_grind = form_data.get("grind_setting", "")
+        if raw_grind and grinder_for_manual.display_format in ("x.y", "x.y.z"):
+            try:
+                form_data["grind_setting"] = str(grinder_for_manual.from_display(str(raw_grind)))
+            except (ValueError, TypeError):
+                pass  # Fallback: let _extract_params_from_form try float()
+
+    # Extract all recognized param values from form
+    params = _extract_params_from_form(method, form_data)
 
     # Validate manual brews against bean parameter bounds
     if is_manual:

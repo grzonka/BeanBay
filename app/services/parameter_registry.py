@@ -551,7 +551,10 @@ def build_parameters_for_setup(
     continue to work via Campaign.from_json() without going through this function.
 
     Priority for grind_setting bounds:
-      registry defaults -> bean overrides -> grinder clips (hard ceiling)
+      1. If grinder provided: suggest_grind_range() computes method-appropriate range
+         as a percentage of the grinder's linearized range, then bean overrides narrow it,
+         then grinder physical limits clip it.
+      2. If no grinder: registry defaults, then bean overrides.
 
     Args:
         method: Brew method (e.g. "espresso", "pour-over").
@@ -564,11 +567,14 @@ def build_parameters_for_setup(
     """
     param_defs = PARAMETER_REGISTRY.get(method, PARAMETER_REGISTRY["espresso"])
 
-    # Pre-compute grinder linear bounds for grind_setting clipping
+    # Pre-compute grinder bounds for grind_setting
     grinder_bounds = None
+    grinder_suggested = None
     if grinder is not None:
         if hasattr(grinder, "linear_bounds") and callable(grinder.linear_bounds):
             grinder_bounds = grinder.linear_bounds()
+        # Compute method-appropriate grind range as percentage of grinder's full range
+        grinder_suggested = suggest_grind_range(grinder, method)
 
     parameters = []
     for pdef in param_defs:
@@ -598,8 +604,21 @@ def build_parameters_for_setup(
                     lo = spec.get("min", lo)
                     hi = spec.get("max", hi)
 
-            # Clip grind_setting to grinder's physical range (hard ceiling)
-            if name == "grind_setting" and grinder_bounds is not None:
+            # For grind_setting with a grinder: use percentage-based range as base,
+            # then clip to physical limits. This ensures multi-ring grinders get
+            # method-appropriate ranges instead of registry defaults (which are on
+            # a different scale).
+            if name == "grind_setting" and grinder_suggested is not None:
+                # Use suggested range as base (unless bean overrides were applied)
+                if not (overrides and name in overrides):
+                    lo, hi = grinder_suggested
+                # Always clip to grinder's physical range
+                if grinder_bounds is not None:
+                    grinder_min, grinder_max = grinder_bounds
+                    lo = max(lo, grinder_min)
+                    hi = min(hi, grinder_max)
+            elif name == "grind_setting" and grinder_bounds is not None:
+                # No suggested range but have physical limits — just clip
                 grinder_min, grinder_max = grinder_bounds
                 lo = max(lo, grinder_min)
                 hi = min(hi, grinder_max)
