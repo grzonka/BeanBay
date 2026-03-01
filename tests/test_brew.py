@@ -343,6 +343,29 @@ def test_show_best_excludes_failed_shots(active_client, sample_bean, db_session)
     assert "No shots yet" in response.text
 
 
+def test_show_best_includes_null_is_failed(active_client, sample_bean, db_session):
+    """GET /brew/best treats is_failed=NULL as not-failed (legacy data)."""
+    # Insert a measurement with is_failed=NULL (simulates legacy data)
+    m = Measurement(
+        bean_id=sample_bean.id,
+        recommendation_id=str(uuid.uuid4()),
+        grind_setting=20.0,
+        temperature=93.0,
+        dose_in=19.0,
+        target_yield=40.0,
+        taste=8.5,
+    )
+    # Bypass the ORM default by setting is_failed to None after construction
+    m.is_failed = None
+    db_session.add(m)
+    db_session.commit()
+
+    response = active_client.get("/brew/best")
+    assert response.status_code == 200
+    assert "8.5" in response.text
+    assert "Best Recipe" in response.text
+
+
 def test_show_best_displays_brew_ratio(active_client, sample_bean, db_session):
     """GET /brew/best shows the dose:yield brew ratio."""
     _seed_measurement(db_session, sample_bean.id, taste=8.5)

@@ -166,12 +166,17 @@ def _require_active_bean(request: Request, db: Session) -> Optional[Bean]:
 
 
 def _best_measurement(bean_id: str, db: Session) -> Optional[Measurement]:
-    """Return highest-taste measurement for a bean (excluding failed shots)."""
+    """Return highest-taste measurement for a bean (excluding failed shots).
+
+    Uses ``isnot(True)`` instead of ``== False`` so that rows where
+    ``is_failed`` is NULL (legacy data inserted without an explicit flag)
+    are still included.
+    """
     return (
         db.query(Measurement)
         .filter(
             Measurement.bean_id == bean_id,
-            Measurement.is_failed == False,  # noqa: E712
+            Measurement.is_failed.isnot(True),
         )
         .order_by(Measurement.taste.desc())
         .first()
