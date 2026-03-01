@@ -34,11 +34,20 @@
 {% endmacro %}
 
 <div class="recipe-params">
-  {# ── Grind Setting ──────────────────────────────────────────────── #}
+  {# ── Grind Setting (display in native notation if available) ───── #}
   {% if rec is mapping %}
-    {{ param_block('grind_setting', 'Grind', rec.grind_setting) }}
+    {% if rec.grind_display is defined and rec.grind_display is not none %}
+      {{ param_block('grind_setting', 'Grind', rec.grind_display) }}
+    {% else %}
+      {{ param_block('grind_setting', 'Grind', rec.grind_setting) }}
+    {% endif %}
   {% else %}
-    {{ param_block('grind_setting', 'Grind', rec.grind_setting) }}
+    {# ORM Measurement object — use grind_display if added to dict, else raw value #}
+    {% if grind_display is defined and grind_display is not none %}
+      {{ param_block('grind_setting', 'Grind', grind_display) }}
+    {% else %}
+      {{ param_block('grind_setting', 'Grind', rec.grind_setting) }}
+    {% endif %}
   {% endif %}
 
   {# ── Temperature ────────────────────────────────────────────────── #}

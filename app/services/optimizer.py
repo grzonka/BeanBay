@@ -56,9 +56,36 @@ def _round_value(value: float, step: float) -> float:
     return round(round(value / step) * step, 2)
 
 
+def snap_grind_to_step(value: float, grinder) -> float:
+    """Snap a grind setting value to the nearest valid step for a stepped grinder.
+
+    If grinder is None or continuous (finest_step() is None), return value unchanged.
+    Otherwise, snap to nearest valid step within grinder bounds.
+
+    Args:
+        value: The grind setting value to snap.
+        grinder: Grinder ORM instance, or None.
+
+    Returns:
+        Snapped grind setting value.
+    """
+    if grinder is None:
+        return value
+    bounds = grinder.linear_bounds()
+    if bounds is None:
+        return value
+    step = grinder.finest_step()
+    if step is None:
+        return value
+    min_val, max_val = bounds
+    snapped = round((value - min_val) / step) * step + min_val
+    return max(min_val, min(max_val, round(snapped, 2)))
+
+
 def _resolve_bounds(
     overrides: dict | None,
     method: str = "espresso",
+    grinder=None,
 ) -> dict[str, tuple[float, float]]:
     """Merge per-bean overrides onto default bounds.
 
@@ -67,6 +94,7 @@ def _resolve_bounds(
                    Only parameters that differ from defaults need to be present.
                    None or {} means "use all defaults".
         method: Brew method name — determines which default bounds to use.
+        grinder: Grinder ORM instance for physical range clipping (or None).
 
     Returns:
         Complete bounds dict for all continuous parameters of the given method.
@@ -77,6 +105,23 @@ def _resolve_bounds(
             if param in bounds and isinstance(spec, dict):
                 lo, hi = bounds[param]
                 bounds[param] = (spec.get("min", lo), spec.get("max", hi))
+    # For grind_setting with a grinder: use percentage-based suggested range,
+    # then clip to physical limits.
+    if grinder is not None and "grind_setting" in bounds:
+        from app.services.parameter_registry import suggest_grind_range
+
+        suggested = suggest_grind_range(grinder, method)
+        if suggested is not None:
+            # Use suggested range unless bean overrides were applied
+            has_grind_override = overrides and "grind_setting" in overrides
+            if not has_grind_override:
+                bounds["grind_setting"] = suggested
+        # Always clip to grinder's physical limits
+        grinder_bounds = grinder.linear_bounds() if hasattr(grinder, "linear_bounds") else None
+        if grinder_bounds is not None:
+            g_lo, g_hi = grinder_bounds
+            lo, hi = bounds["grind_setting"]
+            bounds["grind_setting"] = (max(lo, g_lo), min(hi, g_hi))
     return bounds
 
 
@@ -183,6 +228,7 @@ class OptimizerService:
         overrides: dict | None = None,
         method: str = "espresso",
         brewer=None,
+        grinder=None,
     ) -> Campaign:
         """Create a hybrid BayBE campaign for the given method.
 
@@ -191,8 +237,9 @@ class OptimizerService:
                        e.g. {"grind_setting": {"min": 18.0, "max": 22.0}}
             method: Brew method — determines parameter set (espresso vs pour-over).
             brewer: Brewer ORM object (or None for Tier 1 / legacy campaigns).
+            grinder: Grinder ORM object for physical range clipping (or None).
         """
-        parameters = build_parameters_for_setup(method, brewer=brewer, overrides=overrides)
+        parameters = build_parameters_for_setup(method, brewer=brewer, overrides=overrides, grinder=grinder)
         searchspace = SearchSpace.from_product(parameters=parameters)
         target = NumericalTarget(name="taste")
         objective = SingleTargetObjective(target=target)
@@ -207,6 +254,7 @@ class OptimizerService:
         target_bean: "Bean | None" = None,
         db: "Session | None" = None,
         brewer=None,
+        grinder=None,
     ) -> Campaign:
         """Get campaign from cache, DB, or create fresh. Thread-safe.
 
@@ -224,12 +272,13 @@ class OptimizerService:
             target_bean: Bean ORM object for transfer learning lookup (optional).
             db: SQLAlchemy Session for similarity queries (optional).
             brewer: Brewer ORM object for capability-gated parameter selection (optional).
+            grinder: Grinder ORM object for physical range clipping (optional).
         """
         # Import here to avoid circular imports at module load time
         from app.services.similarity import SimilarityService
         from app.services.transfer_learning import build_transfer_campaign
 
-        current_fp = _bounds_fingerprint(_resolve_bounds(overrides, method))
+        current_fp = _bounds_fingerprint(_resolve_bounds(overrides, method, grinder=grinder))
 
         with self._lock:
             # Load from DB if not cached
@@ -258,7 +307,7 @@ class OptimizerService:
                                 }
 
                     if campaign is None:
-                        campaign = self._create_fresh_campaign(overrides, method, brewer)
+                        campaign = self._create_fresh_campaign(overrides, method, brewer, grinder=grinder)
 
                     self._cache[campaign_key] = campaign
                     self._fingerprints[campaign_key] = current_fp
@@ -272,7 +321,7 @@ class OptimizerService:
             if stored_fp and stored_fp != current_fp:
                 old_campaign = self._cache[campaign_key]
                 measurements_df = old_campaign.measurements
-                new_campaign = self._create_fresh_campaign(overrides, method, brewer)
+                new_campaign = self._create_fresh_campaign(overrides, method, brewer, grinder=grinder)
                 if not measurements_df.empty:
                     param_cols = get_param_columns(method, brewer)
                     # For transfer campaigns the measurements include bean_task — filter to
@@ -318,6 +367,7 @@ class OptimizerService:
         target_bean: "Bean | None" = None,
         db: "Session | None" = None,
         brewer=None,
+        grinder=None,
     ) -> dict:
         """Generate a recommendation. Runs in thread pool (BayBE blocks 3-10s).
 
@@ -328,11 +378,13 @@ class OptimizerService:
             target_bean: Bean ORM object for transfer learning lookup (optional).
             db: SQLAlchemy Session for similarity queries (optional).
             brewer: Brewer ORM object for capability-gated parameter selection (optional).
+            grinder: Grinder ORM object for physical range clipping and step snapping (optional).
         """
 
         def _recommend():
             campaign = self.get_or_create_campaign(
-                campaign_key, overrides, method, target_bean=target_bean, db=db, brewer=brewer
+                campaign_key, overrides, method, target_bean=target_bean, db=db, brewer=brewer,
+                grinder=grinder,
             )
             with self._lock:
                 campaign.clear_cache()
@@ -345,6 +397,10 @@ class OptimizerService:
             for param, step in rounding.items():
                 if param in rec:
                     rec[param] = _round_value(float(rec[param]), step)
+
+            # Snap grind_setting to nearest valid step for stepped grinders
+            if grinder is not None and "grind_setting" in rec:
+                rec["grind_setting"] = snap_grind_to_step(float(rec["grind_setting"]), grinder)
 
             # Generate idempotency token
             rec["recommendation_id"] = str(uuid.uuid4())
@@ -360,6 +416,7 @@ class OptimizerService:
         method: str = "espresso",
         target_bean_id: str | None = None,
         brewer=None,
+        grinder=None,
     ) -> None:
         """Record a measurement. Runs synchronously (fast).
 
@@ -371,8 +428,9 @@ class OptimizerService:
             method: Brew method for parameter set selection.
             target_bean_id: Bean ID to set as bean_task for transfer learning campaigns.
             brewer: Brewer ORM object for capability-gated parameter selection (optional).
+            grinder: Grinder ORM object for physical range clipping (optional).
         """
-        campaign = self.get_or_create_campaign(campaign_key, overrides, method, brewer=brewer)
+        campaign = self.get_or_create_campaign(campaign_key, overrides, method, brewer=brewer, grinder=grinder)
         # Only include method-appropriate BayBE columns + taste
         param_cols = get_param_columns(method, brewer)
         baybe_data = {k: measurement[k] for k in param_cols + ["taste"] if k in measurement}
@@ -391,6 +449,7 @@ class OptimizerService:
         overrides: dict | None = None,
         method: str = "espresso",
         brewer=None,
+        grinder=None,
     ) -> Campaign:
         """Disaster recovery: rebuild campaign from measurement data.
 
@@ -400,8 +459,9 @@ class OptimizerService:
             overrides: Per-bean parameter range overrides.
             method: Brew method for parameter set selection.
             brewer: Brewer ORM object for capability-gated parameter selection (optional).
+            grinder: Grinder ORM object for physical range clipping (optional).
         """
-        campaign = self._create_fresh_campaign(overrides, method, brewer)
+        campaign = self._create_fresh_campaign(overrides, method, brewer, grinder=grinder)
         if not measurements_df.empty:
             param_cols = get_param_columns(method, brewer)
             baybe_cols = param_cols + ["taste"]
@@ -410,7 +470,7 @@ class OptimizerService:
                 measurements_df[available_cols],
                 numerical_measurements_must_be_within_tolerance=False,
             )
-        current_fp = _bounds_fingerprint(_resolve_bounds(overrides, method))
+        current_fp = _bounds_fingerprint(_resolve_bounds(overrides, method, grinder=grinder))
         new_param_fp = _param_set_fingerprint(method, brewer)
         with self._lock:
             self._cache[campaign_key] = campaign
@@ -573,6 +633,7 @@ class OptimizerService:
         method: str,
         brewer,
         overrides: dict | None = None,
+        grinder=None,
     ) -> Campaign:
         """Rebuild the campaign with the current brewer's parameter set.
 
@@ -585,6 +646,7 @@ class OptimizerService:
             method: Brew method name.
             brewer: Current Brewer ORM object.
             overrides: Per-bean parameter range overrides.
+            grinder: Grinder ORM object for physical range clipping (optional).
         """
         from app.models.campaign_state import CampaignState
 
@@ -601,7 +663,7 @@ class OptimizerService:
                 measurements_df = pd.DataFrame()
 
         # Build fresh campaign with new param set
-        new_campaign = self._create_fresh_campaign(overrides, method, brewer)
+        new_campaign = self._create_fresh_campaign(overrides, method, brewer, grinder=grinder)
         if not measurements_df.empty:
             new_param_cols = get_param_columns(method, brewer)
             required_cols = new_param_cols + ["taste"]
@@ -616,7 +678,7 @@ class OptimizerService:
                     numerical_measurements_must_be_within_tolerance=False,
                 )
 
-        current_fp = _bounds_fingerprint(_resolve_bounds(overrides, method))
+        current_fp = _bounds_fingerprint(_resolve_bounds(overrides, method, grinder=grinder))
         new_param_fp = _param_set_fingerprint(method, brewer)
 
         with self._lock:

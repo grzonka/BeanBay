@@ -27,10 +27,8 @@ def sample_grinder(db_session):
     """Create a sample stepped grinder."""
     grinder = Grinder(
         name="Comandante C40",
-        dial_type="stepped",
-        step_size=0.5,
-        min_value=1.0,
-        max_value=40.0,
+        display_format="decimal",
+        ring_sizes=[[1, 40, 1]],
     )
     db_session.add(grinder)
     db_session.commit()
@@ -100,15 +98,15 @@ def test_equipment_page_shows_counts(
 
 
 def test_create_grinder_stepped(client, db_session):
-    """POST /equipment/grinders with stepped config creates grinder in DB."""
+    """POST /equipment/grinders with stepped (decimal) config creates grinder in DB."""
     response = client.post(
         "/equipment/grinders",
         data={
             "name": "Comandante C40",
-            "dial_type": "stepped",
-            "step_size": "1",
-            "min_value": "1",
-            "max_value": "40",
+            "display_format": "decimal",
+            "ring_min": "1",
+            "ring_max": "40",
+            "ring_step": "1",
         },
         follow_redirects=False,
     )
@@ -116,21 +114,20 @@ def test_create_grinder_stepped(client, db_session):
 
     grinder = db_session.query(Grinder).filter(Grinder.name == "Comandante C40").first()
     assert grinder is not None
-    assert grinder.dial_type == "stepped"
-    assert grinder.step_size == 1.0
-    assert grinder.min_value == 1.0
-    assert grinder.max_value == 40.0
+    assert grinder.display_format == "decimal"
+    assert grinder.ring_sizes == [(1.0, 40.0, 1.0)]
 
 
 def test_create_grinder_stepless(client, db_session):
-    """POST /equipment/grinders with stepless config creates grinder."""
+    """POST /equipment/grinders with stepless (continuous) config creates grinder."""
     response = client.post(
         "/equipment/grinders",
         data={
             "name": "Lagom P64",
-            "dial_type": "stepless",
-            "min_value": "0",
-            "max_value": "100",
+            "display_format": "decimal",
+            "ring_min": "0",
+            "ring_max": "100",
+            "ring_step": "",
         },
         follow_redirects=False,
     )
@@ -138,20 +135,20 @@ def test_create_grinder_stepless(client, db_session):
 
     grinder = db_session.query(Grinder).filter(Grinder.name == "Lagom P64").first()
     assert grinder is not None
-    assert grinder.dial_type == "stepless"
-    assert grinder.step_size is None
+    assert grinder.display_format == "decimal"
+    assert grinder.ring_sizes == [(0.0, 100.0, None)]
 
 
 def test_edit_grinder(client, sample_grinder, db_session):
-    """POST /equipment/grinders/{id} updates name and dial config."""
+    """POST /equipment/grinders/{id} updates name and ring config."""
     response = client.post(
         f"/equipment/grinders/{sample_grinder.id}",
         data={
             "name": "Comandante C40 MK4",
-            "dial_type": "stepped",
-            "step_size": "0.5",
-            "min_value": "0",
-            "max_value": "50",
+            "display_format": "decimal",
+            "ring_min": "0",
+            "ring_max": "50",
+            "ring_step": "0.5",
         },
         follow_redirects=False,
     )
@@ -160,7 +157,7 @@ def test_edit_grinder(client, sample_grinder, db_session):
     db_session.expire_all()
     updated = db_session.query(Grinder).filter(Grinder.id == sample_grinder.id).first()
     assert updated.name == "Comandante C40 MK4"
-    assert updated.max_value == 50.0
+    assert updated.ring_sizes == [(0.0, 50.0, 0.5)]
 
 
 def test_edit_grinder_form(client, sample_grinder):

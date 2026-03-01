@@ -1,6 +1,8 @@
+import json
 import uuid
+from typing import Optional
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, String, Table, func
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, String, Table, Text, func
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -34,12 +36,143 @@ class Grinder(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False)
-    dial_type = Column(String, nullable=False, default="stepless")  # "stepped" or "stepless"
-    step_size = Column(Float, nullable=True)  # only meaningful when dial_type="stepped"
-    min_value = Column(Float, nullable=True)  # minimum grind setting
-    max_value = Column(Float, nullable=True)  # maximum grind setting
+
+    # ── Multi-ring grind dial columns ───────────────────────────────────
+    display_format = Column(String, nullable=False, default="decimal")
+    # Dial notation: "decimal", "x.y", "x.y.z"
+
+    ring_sizes_json = Column(Text, nullable=True)
+    # JSON-serialized list of [min, max, step] tuples per ring.
+    # step=None for continuous.  Example: [[0, 50, null]] or [[0, 4, 1], [0, 5, 1], [0, 10, 1]]
+
     is_retired = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, server_default=func.now())
+
+    def __init__(self, **kwargs):
+        # Handle ring_sizes convenience kwarg -> serialize to ring_sizes_json
+        ring_sizes = kwargs.pop("ring_sizes", None)
+        # Set Python-side defaults for new columns
+        kwargs.setdefault("display_format", "decimal")
+        super().__init__(**kwargs)
+        if ring_sizes is not None:
+            self.ring_sizes = ring_sizes
+
+    # ── ring_sizes JSON property ─────────────────────────────────────────
+
+    @property
+    def ring_sizes(self) -> Optional[list[tuple]]:
+        """Deserialize ring_sizes_json into a list of (min, max, step) tuples."""
+        if self.ring_sizes_json is None:
+            return None
+        raw = json.loads(self.ring_sizes_json)
+        return [tuple(r) for r in raw]
+
+    @ring_sizes.setter
+    def ring_sizes(self, value: Optional[list]) -> None:
+        """Serialize a list of (min, max, step) tuples to JSON."""
+        if value is None:
+            self.ring_sizes_json = None
+        else:
+            self.ring_sizes_json = json.dumps([list(r) for r in value])
+
+    # ── Helper methods ───────────────────────────────────────────────────
+
+    def _ring_position_counts(self) -> list[int]:
+        """Number of discrete positions per ring: max - min + 1 (for stepped rings)."""
+        rings = self.ring_sizes
+        if rings is None:
+            return []
+        return [int(r[1] - r[0] + 1) for r in rings]
+
+    def linear_bounds(self) -> Optional[tuple[float, float]]:
+        """Compute linearized (min, max) from ring_sizes.
+
+        For a single continuous ring, returns (ring_min, ring_max).
+        For multi-ring or single stepped ring, returns (0, total_positions - 1).
+        Returns None if ring_sizes is not set.
+        """
+        rings = self.ring_sizes
+        if rings is None:
+            return None
+
+        if len(rings) == 1:
+            # Single ring: linear range equals the ring's own range
+            return (float(rings[0][0]), float(rings[0][1]))
+
+        # Multi-ring: total positions = product of per-ring position counts
+        counts = self._ring_position_counts()
+        total = 1
+        for c in counts:
+            total *= c
+        return (0.0, float(total - 1))
+
+    def finest_step(self) -> Optional[float]:
+        """Return the smallest step size across all rings, or None if any ring is continuous."""
+        rings = self.ring_sizes
+        if rings is None:
+            return None
+        steps = [r[2] for r in rings]
+        if any(s is None for s in steps):
+            return None
+        return float(min(steps))
+
+    def to_display(self, value: float) -> str:
+        """Convert a linear value to display notation.
+
+        For decimal format (single ring): returns str(value), dropping .0 for whole numbers
+        when the ring is stepped.
+        For multi-ring formats (x.y, x.y.z): decomposes the linear integer into
+        per-ring positions using mixed-radix decomposition.
+        """
+        rings = self.ring_sizes
+        if rings is None:
+            return str(value)
+
+        if len(rings) == 1:
+            # Single ring — decimal display
+            step = rings[0][2]
+            if step is not None and value == int(value):
+                return str(int(value))
+            return str(value)
+
+        # Multi-ring: mixed-radix decomposition (most significant ring first)
+        counts = self._ring_position_counts()
+        linear_int = int(value)
+        parts: list[int] = []
+        for i in range(len(counts) - 1, -1, -1):
+            parts.append(linear_int % counts[i])
+            linear_int //= counts[i]
+        parts.reverse()
+
+        # Add ring minimums to each position
+        result = [str(parts[i] + int(rings[i][0])) for i in range(len(rings))]
+        return ".".join(result)
+
+    def from_display(self, text: str) -> float:
+        """Parse display notation to a linear value.
+
+        For decimal format (single ring): parses as float.
+        For multi-ring formats: computes linear value from per-ring positions.
+        """
+        rings = self.ring_sizes
+        if rings is None:
+            return float(text)
+
+        if len(rings) == 1:
+            return float(text)
+
+        # Multi-ring: parse parts and compute linear value
+        parts = text.split(".")
+        counts = self._ring_position_counts()
+        linear = 0
+        for i, part_str in enumerate(parts):
+            position = int(part_str) - int(rings[i][0])  # subtract ring minimum
+            # Multiply by product of all subsequent ring counts
+            multiplier = 1
+            for j in range(i + 1, len(counts)):
+                multiplier *= counts[j]
+            linear += position * multiplier
+        return float(linear)
 
 
 class Brewer(Base):

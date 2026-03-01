@@ -5,19 +5,24 @@
       <div>
         <h3 class="font-semibold">{{ grinder.name }}</h3>
         <div class="text-sm text-base-content/70 mt-1">
-          {% if grinder.dial_type == "stepped" %}
-            Stepped
-            {% if grinder.step_size is not none %}
-              · step {{ grinder.step_size }}
-            {% endif %}
-            {% if grinder.min_value is not none and grinder.max_value is not none %}
-              · {{ grinder.min_value }}–{{ grinder.max_value }}
+          {% if grinder.ring_sizes %}
+            {% if grinder.display_format == 'x.y' or grinder.display_format == 'x.y.z' %}
+              {{ grinder.display_format }} format
+              · {{ grinder.ring_sizes|length }} rings
+              {% set bounds = grinder.linear_bounds() %}
+              {% if bounds %}
+                · {{ grinder.to_display(bounds[0]) }}–{{ grinder.to_display(bounds[1]) }}
+              {% endif %}
+            {% else %}
+              {% if grinder.ring_sizes[0][2] is not none %}
+                Stepped · step {{ grinder.ring_sizes[0][2] }}
+              {% else %}
+                Stepless
+              {% endif %}
+              · {{ grinder.ring_sizes[0][0] }}–{{ grinder.ring_sizes[0][1] }}
             {% endif %}
           {% else %}
-            Stepless
-            {% if grinder.min_value is not none and grinder.max_value is not none %}
-              · range {{ grinder.min_value }}–{{ grinder.max_value }}
-            {% endif %}
+            No range configured
           {% endif %}
         </div>
       </div>

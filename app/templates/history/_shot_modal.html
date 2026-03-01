@@ -26,7 +26,7 @@
     <div class="recipe-params text-sm">
       <div class="recipe-param">
         <span class="recipe-label">Grind</span>
-        <span class="recipe-value text-lg">{{ shot.grind_setting }}</span>
+        <span class="recipe-value text-lg">{{ shot.grind_display if shot.grind_display is defined and shot.grind_display else shot.grind_setting }}</span>
       </div>
       {% if shot.temperature is not none %}
       <div class="recipe-param">
