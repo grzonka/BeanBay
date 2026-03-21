@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from beanbay.dependencies import SessionDep
+from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.bean import (
     Bag,
     Bean,
@@ -40,32 +40,7 @@ router = APIRouter(tags=["Beans"])
 # ======================================================================
 
 
-def _validate_sort(
-    sort_by: str,
-    sort_dir: str,
-    allowed: list[str],
-) -> None:
-    """Raise 422 if sort parameters are invalid.
 
-    Parameters
-    ----------
-    sort_by : str
-        Column to sort by.
-    sort_dir : str
-        ``"asc"`` or ``"desc"``.
-    allowed : list[str]
-        Allowed column names.
-    """
-    if sort_by not in allowed:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_by field '{sort_by}'. Allowed: {allowed}",
-        )
-    if sort_dir not in ("asc", "desc"):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_dir '{sort_dir}'. Must be 'asc' or 'desc'.",
-        )
 
 
 # ======================================================================
@@ -212,7 +187,7 @@ def list_beans(
     PaginatedResponse[BeanRead]
         Paginated response with ``items``, ``total``, ``limit``, ``offset``.
     """
-    _validate_sort(sort_by, sort_dir, BEAN_SORTABLE)
+    validate_sort(sort_by, sort_dir, BEAN_SORTABLE)
 
     stmt = select(Bean)
     count_stmt = select(func.count()).select_from(Bean)
@@ -511,7 +486,7 @@ def list_bean_bags(
     PaginatedResponse[BagRead]
         Paginated response with ``items``, ``total``, ``limit``, ``offset``.
     """
-    _validate_sort(sort_by, sort_dir, BAG_SORTABLE)
+    validate_sort(sort_by, sort_dir, BAG_SORTABLE)
 
     # Verify bean exists
     db_bean = session.get(Bean, bean_id)
@@ -644,7 +619,7 @@ def list_bags(
     PaginatedResponse[BagRead]
         Paginated response with ``items``, ``total``, ``limit``, ``offset``.
     """
-    _validate_sort(sort_by, sort_dir, BAG_SORTABLE)
+    validate_sort(sort_by, sort_dir, BAG_SORTABLE)
 
     stmt = select(Bag)
     count_stmt = select(func.count()).select_from(Bag)

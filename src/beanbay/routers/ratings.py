@@ -7,7 +7,7 @@ Taste is a 1:1 sub-resource managed via PUT/PATCH/DELETE.
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import select
 
@@ -455,7 +455,7 @@ def patch_bean_rating_taste(
 def delete_bean_rating_taste(
     rating_id: uuid.UUID,
     session: SessionDep,
-) -> Response:
+) -> None:
     """Remove the taste from a bean rating.
 
     Parameters
@@ -490,4 +490,3 @@ def delete_bean_rating_taste(
         session.delete(link)
     session.delete(db_taste)
     session.commit()
-    return Response(status_code=204)

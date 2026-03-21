@@ -7,13 +7,11 @@ pagination, sorting, include_retired filtering, and soft-delete.
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Any
-
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from beanbay.dependencies import SessionDep
+from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.equipment import (
     Brewer,
     BrewerMethodLink,
@@ -35,7 +33,9 @@ from beanbay.schemas.equipment import (
     PaperCreate,
     PaperRead,
     PaperUpdate,
+    RingConfig,
     WaterCreate,
+    WaterMineralCreate,
     WaterRead,
     WaterUpdate,
 )
@@ -48,36 +48,8 @@ router = APIRouter(tags=["Equipment"])
 # ======================================================================
 
 
-def _validate_sort(sort_by: str, sort_dir: str, allowed: list[str]) -> None:
-    """Validate sort_by and sort_dir parameters.
 
-    Parameters
-    ----------
-    sort_by : str
-        Field to sort by.
-    sort_dir : str
-        Sort direction: ``"asc"`` or ``"desc"``.
-    allowed : list[str]
-        Allowed sort fields.
-
-    Raises
-    ------
-    HTTPException
-        If sort_by or sort_dir is invalid.
-    """
-    if sort_by not in allowed:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_by field '{sort_by}'. Allowed: {allowed}",
-        )
-    if sort_dir not in ("asc", "desc"):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_dir '{sort_dir}'. Must be 'asc' or 'desc'.",
-        )
-
-
-def _rings_to_json(rings: list[Any] | None) -> str | None:
+def _rings_to_json(rings: list[RingConfig] | None) -> str | None:
     """Serialize a list of RingConfig objects to JSON string.
 
     Parameters
@@ -114,7 +86,7 @@ def list_grinders(
     session: SessionDep,
 ) -> PaginatedResponse[GrinderRead]:
     """List grinders with optional search, pagination, and sorting."""
-    _validate_sort(sort_by, sort_dir, GRINDER_SORT_FIELDS)
+    validate_sort(sort_by, sort_dir, GRINDER_SORT_FIELDS)
 
     stmt = select(Grinder)
     count_stmt = select(func.count()).select_from(Grinder)
@@ -321,7 +293,7 @@ def list_brewers(
     session: SessionDep,
 ) -> PaginatedResponse[BrewerRead]:
     """List brewers with optional search, pagination, and sorting."""
-    _validate_sort(sort_by, sort_dir, BREWER_SORT_FIELDS)
+    validate_sort(sort_by, sort_dir, BREWER_SORT_FIELDS)
 
     stmt = select(Brewer)
     count_stmt = select(func.count()).select_from(Brewer)
@@ -485,7 +457,7 @@ def list_papers(
     session: SessionDep,
 ) -> PaginatedResponse[PaperRead]:
     """List papers with optional search, pagination, and sorting."""
-    _validate_sort(sort_by, sort_dir, PAPER_SORT_FIELDS)
+    validate_sort(sort_by, sort_dir, PAPER_SORT_FIELDS)
 
     stmt = select(Paper)
     count_stmt = select(func.count()).select_from(Paper)
@@ -604,7 +576,7 @@ WATER_SORT_FIELDS = ["name", "created_at", "updated_at"]
 def _set_water_minerals(
     session: Session,
     water: Water,
-    minerals: list[Any],
+    minerals: list[WaterMineralCreate],
 ) -> None:
     """Delete all existing minerals and reinsert from the given list.
 
@@ -647,7 +619,7 @@ def list_waters(
     session: SessionDep,
 ) -> PaginatedResponse[WaterRead]:
     """List waters with optional search, pagination, and sorting."""
-    _validate_sort(sort_by, sort_dir, WATER_SORT_FIELDS)
+    validate_sort(sort_by, sort_dir, WATER_SORT_FIELDS)
 
     stmt = select(Water)
     count_stmt = select(func.count()).select_from(Water)

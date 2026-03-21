@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import select
 
-from beanbay.dependencies import SessionDep
+from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.bean import Bag, Bean
 from beanbay.models.brew import Brew, BrewSetup, BrewTaste, BrewTasteFlavorTagLink
 from beanbay.models.equipment import Grinder
@@ -41,33 +41,6 @@ BREW_SORT_FIELDS = ["brewed_at", "created_at", "dose"]
 # ======================================================================
 
 
-def _validate_sort(sort_by: str, sort_dir: str, allowed: list[str]) -> None:
-    """Validate sort_by and sort_dir parameters.
-
-    Parameters
-    ----------
-    sort_by : str
-        Field to sort by.
-    sort_dir : str
-        Sort direction: ``"asc"`` or ``"desc"``.
-    allowed : list[str]
-        Allowed sort fields.
-
-    Raises
-    ------
-    HTTPException
-        If sort_by or sort_dir is invalid.
-    """
-    if sort_by not in allowed:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_by field '{sort_by}'. Allowed: {allowed}",
-        )
-    if sort_dir not in ("asc", "desc"):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_dir '{sort_dir}'. Must be 'asc' or 'desc'.",
-        )
 
 
 def _get_ring_sizes(grinder: Grinder | None) -> list[tuple[float, float, float | None]] | None:
@@ -382,7 +355,7 @@ def list_brews(
     session: SessionDep,
 ) -> PaginatedResponse[BrewListRead]:
     """List brews with filtering, pagination, and sorting."""
-    _validate_sort(sort_by, sort_dir, BREW_SORT_FIELDS)
+    validate_sort(sort_by, sort_dir, BREW_SORT_FIELDS)
 
     stmt = select(Brew)
     count_stmt = select(func.count()).select_from(Brew)
