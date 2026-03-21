@@ -212,10 +212,10 @@ class BrewTasteBase(SQLModel):
         Body score (0-10).
     bitterness : float | None
         Bitterness score (0-10).
-    aroma : float | None
-        Aroma score (0-10).
-    intensity : float | None
-        Intensity score (0-10).
+    balance : float | None
+        Balance score (0-10).
+    aftertaste : float | None
+        Aftertaste score (0-10).
     notes : str | None
         Free-text tasting notes.
     """
@@ -225,8 +225,8 @@ class BrewTasteBase(SQLModel):
     sweetness: float | None = None
     body: float | None = None
     bitterness: float | None = None
-    aroma: float | None = None
-    intensity: float | None = None
+    balance: float | None = None
+    aftertaste: float | None = None
     notes: str | None = None
 
 
@@ -260,10 +260,10 @@ class BrewTasteUpdate(SQLModel):
         Updated body score.
     bitterness : float | None
         Updated bitterness score.
-    aroma : float | None
-        Updated aroma score.
-    intensity : float | None
-        Updated intensity score.
+    balance : float | None
+        Updated balance score.
+    aftertaste : float | None
+        Updated aftertaste score.
     notes : str | None
         Updated tasting notes.
     flavor_tag_ids : list[uuid.UUID] | None
@@ -275,8 +275,8 @@ class BrewTasteUpdate(SQLModel):
     sweetness: float | None = None
     body: float | None = None
     bitterness: float | None = None
-    aroma: float | None = None
-    intensity: float | None = None
+    balance: float | None = None
+    aftertaste: float | None = None
     notes: str | None = None
     flavor_tag_ids: list[uuid.UUID] | None = None
 
@@ -332,8 +332,8 @@ class BrewTasteRead(BrewTasteBase):
             "sweetness",
             "body",
             "bitterness",
-            "aroma",
-            "intensity",
+            "balance",
+            "aftertaste",
             "notes",
             "created_at",
             "updated_at",

@@ -231,10 +231,10 @@ class BrewTaste(SQLModel, table=True):
         Body score (0-10).
     bitterness : float | None
         Bitterness score (0-10).
-    aroma : float | None
-        Aroma score (0-10).
-    intensity : float | None
-        Intensity score (0-10).
+    balance : float | None
+        Balance score (0-10).
+    aftertaste : float | None
+        Aftertaste score (0-10).
     notes : str | None
         Free-text tasting notes.
     created_at : datetime
@@ -256,8 +256,8 @@ class BrewTaste(SQLModel, table=True):
     sweetness: float | None = None
     body: float | None = None
     bitterness: float | None = None
-    aroma: float | None = None
-    intensity: float | None = None
+    balance: float | None = None
+    aftertaste: float | None = None
     notes: str | None = None
 
     created_at: datetime = Field(
