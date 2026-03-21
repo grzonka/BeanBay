@@ -28,3 +28,4 @@ tools/
 # OS
 .DS_Store
 src/beanbay/_version.py
+beanbay.db*
