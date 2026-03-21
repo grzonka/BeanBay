@@ -16,10 +16,14 @@ from sqlmodel import SQLModel
 def _compute_is_retired(cls: type, data: dict | object) -> dict:
     """Inject ``is_retired`` bool derived from ``retired_at``.
 
+    Uses ``cls.model_fields`` to dynamically extract all declared fields,
+    making this helper reusable for any Read schema that carries
+    ``retired_at`` and ``is_retired``.
+
     Parameters
     ----------
     cls : type
-        The model class (unused but required by pydantic).
+        The model class whose ``model_fields`` drive extraction.
     data : dict | object
         Raw input — either a dict or an ORM model instance.
 
@@ -31,11 +35,13 @@ def _compute_is_retired(cls: type, data: dict | object) -> dict:
     if isinstance(data, dict):
         data["is_retired"] = data.get("retired_at") is not None
         return data
-    # ORM model
+    # ORM model — dynamically pull every declared field except is_retired
     data_dict: dict[str, Any] = {}
-    for field in ("id", "name", "created_at", "retired_at"):
-        data_dict[field] = getattr(data, field, None)
-    data_dict["is_retired"] = data_dict["retired_at"] is not None
+    for field_name in cls.model_fields:
+        if field_name == "is_retired":
+            continue
+        data_dict[field_name] = getattr(data, field_name, None)
+    data_dict["is_retired"] = data_dict.get("retired_at") is not None
     return data_dict
 
 
