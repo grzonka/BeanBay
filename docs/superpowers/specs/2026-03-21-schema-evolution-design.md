@@ -243,7 +243,7 @@ Removed: `bitterness` (extraction issue, not bean trait), `intensity` (vague).
 | **New junction tables (2)** | bean_flavor_tags, cupping_flavor_tags |
 | **Modified junction table (1)** | bean_origins (+percentage) |
 | **New enums (4)** | BeanMixType, BeanUseType, ProcessCategory, CoffeeSpecies |
-| **Unchanged (18)** | people, grinders, brewers, papers, waters, water_minerals, brew_setups, brews, roasters, brew_methods, stop_modes, flavor_tags, brewer_methods, brewer_stop_modes, bean_processes, bean_variety_link, brew_taste_flavor_tags, bean_taste_flavor_tags |
+| **Unchanged (18)** | people, grinders, brewers, papers, waters, water_minerals, brew_setups, brews, roasters, brew_methods, stop_modes, flavor_tags, brewer_methods, brewer_stop_modes, bean_processes, bean_varieties (junction), brew_taste_flavor_tags, bean_taste_flavor_tags |
 
 ## Out of Scope (Future)
 
