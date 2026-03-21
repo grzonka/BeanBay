@@ -1,3 +1,56 @@
+import { Routes, Route } from 'react-router';
+import { lazy, Suspense } from 'react';
+import { CircularProgress, Box } from '@mui/material';
+import AppLayout from '@/layouts/AppLayout';
+
+const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'));
+const BeansListPage = lazy(() => import('@/features/beans/pages/BeansListPage'));
+const BeanDetailPage = lazy(() => import('@/features/beans/pages/BeanDetailPage'));
+const BagsListPage = lazy(() => import('@/features/bags/BagsListPage'));
+const BrewsListPage = lazy(() => import('@/features/brews/pages/BrewsListPage'));
+const BrewWizard = lazy(() => import('@/features/brews/components/BrewWizard'));
+const BrewDetailPage = lazy(() => import('@/features/brews/pages/BrewDetailPage'));
+const GrindersPage = lazy(() => import('@/features/equipment/pages/GrindersPage'));
+const BrewersPage = lazy(() => import('@/features/equipment/pages/BrewersPage'));
+const PapersPage = lazy(() => import('@/features/equipment/pages/PapersPage'));
+const WatersPage = lazy(() => import('@/features/equipment/pages/WatersPage'));
+const BrewSetupsPage = lazy(() => import('@/features/brew-setups/BrewSetupsPage'));
+const CuppingsListPage = lazy(() => import('@/features/cuppings/pages/CuppingsListPage'));
+const CuppingDetailPage = lazy(() => import('@/features/cuppings/pages/CuppingDetailPage'));
+const RatingDetailPage = lazy(() => import('@/features/ratings/RatingDetailPage'));
+const PeoplePage = lazy(() => import('@/features/people/PeoplePage'));
+const LookupsPage = lazy(() => import('@/features/settings/LookupsPage'));
+
+const Loading = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+    <CircularProgress />
+  </Box>
+);
+
 export default function App() {
-  return <div>BeanBay</div>;
+  return (
+    <Suspense fallback={<Loading />}>
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route index element={<DashboardPage />} />
+          <Route path="beans" element={<BeansListPage />} />
+          <Route path="beans/:beanId" element={<BeanDetailPage />} />
+          <Route path="bags" element={<BagsListPage />} />
+          <Route path="brews" element={<BrewsListPage />} />
+          <Route path="brews/new" element={<BrewWizard />} />
+          <Route path="brews/:brewId" element={<BrewDetailPage />} />
+          <Route path="equipment/grinders" element={<GrindersPage />} />
+          <Route path="equipment/brewers" element={<BrewersPage />} />
+          <Route path="equipment/papers" element={<PapersPage />} />
+          <Route path="equipment/waters" element={<WatersPage />} />
+          <Route path="brew-setups" element={<BrewSetupsPage />} />
+          <Route path="cuppings" element={<CuppingsListPage />} />
+          <Route path="cuppings/:cuppingId" element={<CuppingDetailPage />} />
+          <Route path="bean-ratings/:ratingId" element={<RatingDetailPage />} />
+          <Route path="people" element={<PeoplePage />} />
+          <Route path="settings/lookups" element={<LookupsPage />} />
+        </Route>
+      </Routes>
+    </Suspense>
+  );
 }
