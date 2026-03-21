@@ -177,11 +177,11 @@ class Brewer(SQLModel, table=True):
     temp_control_type : TempControlType
         Temperature control capability.
     temp_min : float | None
-        Minimum temperature setting.
+        Minimum temperature setting (celsius).
     temp_max : float | None
-        Maximum temperature setting.
+        Maximum temperature setting (celsius).
     temp_step : float | None
-        Temperature step size.
+        Temperature step size (celsius).
     preinfusion_type : PreinfusionType
         Pre-infusion capability.
     preinfusion_max_time : float | None
