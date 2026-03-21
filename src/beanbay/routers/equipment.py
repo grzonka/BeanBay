@@ -43,12 +43,6 @@ from beanbay.schemas.equipment import (
 router = APIRouter(tags=["Equipment"])
 
 
-# ======================================================================
-# Helpers
-# ======================================================================
-
-
-
 def _rings_to_json(rings: list[RingConfig] | None) -> str | None:
     """Serialize a list of RingConfig objects to JSON string.
 
@@ -601,8 +595,8 @@ def _set_water_minerals(
     for m in minerals:
         db_mineral = WaterMineral(
             water_id=water.id,
-            mineral_name=m.mineral_name if hasattr(m, "mineral_name") else m["mineral_name"],
-            ppm=m.ppm if hasattr(m, "ppm") else m["ppm"],
+            mineral_name=m.mineral_name,
+            ppm=m.ppm,
         )
         session.add(db_mineral)
 

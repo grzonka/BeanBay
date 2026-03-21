@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import select
 
-from beanbay.dependencies import SessionDep
+from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.person import Person
 from beanbay.schemas.common import PaginatedResponse
 from beanbay.schemas.person import PersonCreate, PersonRead, PersonUpdate
@@ -60,19 +60,7 @@ def list_people(
     PaginatedResponse[PersonRead]
         Paginated response with ``items``, ``total``, ``limit``, ``offset``.
     """
-    if sort_by not in SORTABLE_FIELDS:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"Invalid sort_by field '{sort_by}'. "
-                f"Allowed: {SORTABLE_FIELDS}"
-            ),
-        )
-    if sort_dir not in ("asc", "desc"):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid sort_dir '{sort_dir}'. Must be 'asc' or 'desc'.",
-        )
+    validate_sort(sort_by, sort_dir, SORTABLE_FIELDS)
 
     stmt = select(Person)
     count_stmt = select(func.count()).select_from(Person)

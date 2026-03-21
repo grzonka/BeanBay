@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from beanbay.dependencies import SessionDep
+from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.bean import (
     Bean,
     BeanOriginLink,
@@ -252,16 +252,7 @@ def create_lookup_router(
         session: SessionDep,
     ) -> PaginatedResponse:  # type: ignore[type-arg]
         """List lookup items with optional search, pagination, and sorting."""
-        if sort_by not in sortable_fields:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Invalid sort_by field '{sort_by}'. Allowed: {sortable_fields}",
-            )
-        if sort_dir not in ("asc", "desc"):
-            raise HTTPException(
-                status_code=422,
-                detail=f"Invalid sort_dir '{sort_dir}'. Must be 'asc' or 'desc'.",
-            )
+        validate_sort(sort_by, sort_dir, sortable_fields)
 
         # Base query
         stmt = select(model_class)

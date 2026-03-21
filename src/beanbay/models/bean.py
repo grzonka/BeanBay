@@ -76,7 +76,7 @@ class BeanVarietyLink(SQLModel, table=True):
         Foreign key to the bean variety.
     """
 
-    __tablename__ = "bean_variety_link"  # type: ignore[assignment]
+    __tablename__ = "bean_variety_links"  # type: ignore[assignment]
 
     bean_id: uuid.UUID = Field(
         foreign_key="beans.id", primary_key=True

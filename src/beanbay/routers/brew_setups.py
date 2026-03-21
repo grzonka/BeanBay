@@ -23,13 +23,6 @@ router = APIRouter(tags=["Brew Setups"])
 BREW_SETUP_SORT_FIELDS = ["name", "created_at"]
 
 
-# ======================================================================
-# Helpers
-# ======================================================================
-
-
-
-
 def _validate_fk_exists(
     session: Session,
     model: type,

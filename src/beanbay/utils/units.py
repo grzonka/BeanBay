@@ -1,4 +1,9 @@
-"""Pint-based unit conversion between metric and imperial systems."""
+"""Pint-based unit conversion between metric and imperial systems.
+
+TODO: Wire ``?units=metric|imperial`` query param into routers. The conversion
+functions are ready but not yet integrated into endpoint serialization. See
+spec section 3.9 for the field list and expected behavior.
+"""
 
 from pint import UnitRegistry
 

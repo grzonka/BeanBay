@@ -36,13 +36,6 @@ router = APIRouter(tags=["Brews"])
 BREW_SORT_FIELDS = ["brewed_at", "created_at", "dose"]
 
 
-# ======================================================================
-# Helpers
-# ======================================================================
-
-
-
-
 def _get_ring_sizes(grinder: Grinder | None) -> list[tuple[float, float, float | None]] | None:
     """Parse ring_sizes_json from a grinder.
 
