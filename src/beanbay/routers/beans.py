@@ -649,6 +649,12 @@ def create_bag_for_bean(
         price=payload.price,
         is_preground=payload.is_preground,
         notes=payload.notes,
+        bought_at=payload.bought_at,
+        vendor_id=payload.vendor_id,
+        frozen_at=payload.frozen_at,
+        thawed_at=payload.thawed_at,
+        storage_type_id=payload.storage_type_id,
+        best_date=payload.best_date,
     )
     session.add(db_bag)
     session.commit()

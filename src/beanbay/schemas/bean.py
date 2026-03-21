@@ -39,6 +39,18 @@ class BagBase(SQLModel):
         Whether the coffee is pre-ground.
     notes : str | None
         Free-text notes.
+    bought_at : date | None
+        Date the bag was purchased.
+    vendor_id : uuid.UUID | None
+        Foreign key to the vendor / shop.
+    frozen_at : datetime | None
+        Timestamp when the bag was frozen.
+    thawed_at : datetime | None
+        Timestamp when the bag was thawed.
+    storage_type_id : uuid.UUID | None
+        Foreign key to the frozen-storage type.
+    best_date : date | None
+        Best-before date.
     """
 
     roast_date: date | None = None
@@ -47,6 +59,12 @@ class BagBase(SQLModel):
     price: float | None = None
     is_preground: bool = False
     notes: str | None = None
+    bought_at: date | None = None
+    vendor_id: uuid.UUID | None = None
+    frozen_at: datetime | None = None
+    thawed_at: datetime | None = None
+    storage_type_id: uuid.UUID | None = None
+    best_date: date | None = None
 
 
 class BagCreate(BagBase):
@@ -71,6 +89,12 @@ class BagUpdate(SQLModel):
     price: float | None = None
     is_preground: bool | None = None
     notes: str | None = None
+    bought_at: date | None = None
+    vendor_id: uuid.UUID | None = None
+    frozen_at: datetime | None = None
+    thawed_at: datetime | None = None
+    storage_type_id: uuid.UUID | None = None
+    best_date: date | None = None
 
 
 class BagRead(BagBase):
@@ -94,6 +118,18 @@ class BagRead(BagBase):
         Whether the coffee is pre-ground.
     notes : str | None
         Free-text notes.
+    bought_at : date | None
+        Date the bag was purchased.
+    vendor_id : uuid.UUID | None
+        Foreign key to the vendor / shop.
+    frozen_at : datetime | None
+        Timestamp when the bag was frozen.
+    thawed_at : datetime | None
+        Timestamp when the bag was thawed.
+    storage_type_id : uuid.UUID | None
+        Foreign key to the frozen-storage type.
+    best_date : date | None
+        Best-before date.
     created_at : datetime
         Creation timestamp.
     updated_at : datetime
@@ -141,6 +177,12 @@ class BagRead(BagBase):
             "price",
             "is_preground",
             "notes",
+            "bought_at",
+            "vendor_id",
+            "frozen_at",
+            "thawed_at",
+            "storage_type_id",
+            "best_date",
             "created_at",
             "updated_at",
             "retired_at",

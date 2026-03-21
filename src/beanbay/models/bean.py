@@ -217,6 +217,18 @@ class Bag(SQLModel, table=True):
         Whether the coffee is pre-ground.
     notes : str | None
         Free-text notes.
+    bought_at : date | None
+        Date the bag was purchased.
+    vendor_id : uuid.UUID | None
+        Foreign key to the vendor / shop.
+    frozen_at : datetime | None
+        Timestamp when the bag was frozen.
+    thawed_at : datetime | None
+        Timestamp when the bag was thawed.
+    storage_type_id : uuid.UUID | None
+        Foreign key to the frozen-storage type.
+    best_date : date | None
+        Best-before date.
     created_at : datetime
         Row creation timestamp (server default).
     updated_at : datetime
@@ -235,6 +247,12 @@ class Bag(SQLModel, table=True):
     price: float | None = None
     is_preground: bool = Field(default=False)
     notes: str | None = None
+    bought_at: date | None = None
+    vendor_id: uuid.UUID | None = Field(default=None, foreign_key="vendors.id")
+    frozen_at: datetime | None = None
+    thawed_at: datetime | None = None
+    storage_type_id: uuid.UUID | None = Field(default=None, foreign_key="storage_types.id")
+    best_date: date | None = None
     created_at: datetime = Field(
         default=None,
         sa_column_kwargs={"server_default": func.now()},
@@ -247,3 +265,5 @@ class Bag(SQLModel, table=True):
 
     # Relationships
     bean: Bean = Relationship(back_populates="bags")
+    vendor: Optional["Vendor"] = Relationship()  # type: ignore[name-defined]  # noqa: F821
+    storage_type: Optional["StorageType"] = Relationship()  # type: ignore[name-defined]  # noqa: F821

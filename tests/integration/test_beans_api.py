@@ -462,3 +462,49 @@ class TestBeanEnrichment:
         )
         assert resp.status_code == 201
         assert len(resp.json()["origins"]) == 1
+
+
+# ======================================================================
+# 12. Bag enrichment (vendor, frozen storage, bought_at, best_date)
+# ======================================================================
+
+
+class TestBagEnrichment:
+    """Tests for enriched Bag fields: vendor, frozen/thawed, bought_at, best_date."""
+
+    def _create_bean(self, client):
+        return client.post("/api/v1/beans", json={"name": "Bag Test Bean"}).json()["id"]
+
+    def test_create_bag_with_new_fields(self, client):
+        """Create a bag with all new enrichment fields and verify response."""
+        bean_id = self._create_bean(client)
+        vendor = client.post("/api/v1/vendors", json={"name": "Test Shop"}).json()
+        storage = client.post("/api/v1/storage-types", json={"name": "Vacuum Sealed"}).json()
+        resp = client.post(f"/api/v1/beans/{bean_id}/bags", json={
+            "weight": 250.0,
+            "bought_at": "2026-03-20",
+            "vendor_id": vendor["id"],
+            "frozen_at": "2026-03-20T10:00:00",
+            "storage_type_id": storage["id"],
+            "best_date": "2026-06-20",
+        })
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["bought_at"] == "2026-03-20"
+        assert data["vendor_id"] == vendor["id"]
+        assert data["frozen_at"] is not None
+        assert data["storage_type_id"] == storage["id"]
+        assert data["best_date"] == "2026-06-20"
+        assert data["thawed_at"] is None
+
+    def test_create_bag_minimal_still_works(self, client):
+        """Create a bag with only weight and verify new fields default to None."""
+        bean_id = self._create_bean(client)
+        resp = client.post(f"/api/v1/beans/{bean_id}/bags", json={"weight": 100.0})
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["bought_at"] is None
+        assert data["vendor_id"] is None
+        assert data["frozen_at"] is None
+        assert data["storage_type_id"] is None
+        assert data["best_date"] is None

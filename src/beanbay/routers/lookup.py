@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.bean import (
+    Bag,
     Bean,
     BeanOriginLink,
     BeanProcessLink,
@@ -548,7 +549,7 @@ vendor_router = create_lookup_router(
     prefix="vendors",
     tag="Vendors",
     sortable_fields=["name", "location", "created_at"],
-    dependency_checks=[],  # Will add bag check in later task
+    dependency_checks=[("bags", _fk_active_count(Bag, "vendor_id"))],
 )
 
 storage_type_router = create_lookup_router(
@@ -558,5 +559,5 @@ storage_type_router = create_lookup_router(
     read_schema=StorageTypeRead,
     prefix="storage-types",
     tag="Storage Types",
-    dependency_checks=[],  # Will add bag check in later task
+    dependency_checks=[("bags", _fk_active_count(Bag, "storage_type_id"))],
 )
