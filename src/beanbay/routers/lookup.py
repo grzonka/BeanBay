@@ -13,11 +13,13 @@ from beanbay.dependencies import SessionDep, validate_sort
 from beanbay.models.bean import (
     Bag,
     Bean,
+    BeanFlavorTagLink,
     BeanOriginLink,
     BeanProcessLink,
     BeanVarietyLink,
 )
 from beanbay.models.brew import Brew, BrewSetup, BrewTaste, BrewTasteFlavorTagLink
+from beanbay.models.cupping import Cupping, CuppingFlavorTagLink
 from beanbay.models.equipment import Brewer, BrewerStopModeLink
 from beanbay.models.rating import BeanRating, BeanTaste, BeanTasteFlavorTagLink
 from beanbay.models.tag import (
@@ -442,6 +444,18 @@ flavor_tag_router = create_lookup_router(
                 "bean_taste_id",
                 BeanRating,
                 "bean_rating_id",
+            ),
+        ),
+        (
+            "bean_flavor_tags",
+            _m2m_active_count(
+                BeanFlavorTagLink, "flavor_tag_id", Bean, "bean_id"
+            ),
+        ),
+        (
+            "cupping_flavor_tags",
+            _m2m_active_count(
+                CuppingFlavorTagLink, "flavor_tag_id", Cupping, "cupping_id"
             ),
         ),
     ],

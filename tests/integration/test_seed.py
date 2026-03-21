@@ -53,3 +53,16 @@ def test_seed_default_person_idempotent(session):
     ).all()
     assert len(people) == 1
     assert people[0].is_default is True
+
+
+def test_seed_storage_types(session):
+    """Calling seed_storage_types inserts the expected default types."""
+    from beanbay.models.tag import StorageType
+    from beanbay.seed import seed_storage_types
+
+    seed_storage_types(session)
+    session.commit()
+
+    types = session.exec(select(StorageType)).all()
+    names = {t.name for t in types}
+    assert {"Vacuum Sealed", "Zip Lock", "Coffee Bag", "Coffee Jar", "Tube"} <= names
