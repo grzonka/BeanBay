@@ -11,6 +11,7 @@ import DataTable from '@/components/DataTable';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { usePaginationParams } from '@/utils/pagination';
 import { useNotification } from '@/components/NotificationProvider';
+import { fmtDate } from '@/utils/date';
 import {
   useBean, useDeleteBean, useBags, useDeleteBag, useUpdateBag, useBeanRatings,
   type Bean, type Bag, type BeanRating,
@@ -23,7 +24,7 @@ import RatingFormDialog from '@/features/ratings/RatingFormDialog';
 const baseBagColumns: GridColDef<Bag>[] = [
   {
     field: 'roast_date', headerName: 'Roast Date', width: 130,
-    renderCell: (p) => p.value ?? '—',
+    renderCell: (p) => fmtDate(p.value as string),
   },
   {
     field: 'weight', headerName: 'Weight (g)', width: 120,
@@ -46,7 +47,7 @@ const baseBagColumns: GridColDef<Bag>[] = [
 // Columns for Ratings sub-table
 const ratingColumns: GridColDef<BeanRating>[] = [
   { field: 'person_name', headerName: 'Person', flex: 1, renderCell: (p) => p.value ?? '—' },
-  { field: 'rated_at', headerName: 'Rated At', width: 130, renderCell: (p) => p.value ?? '—' },
+  { field: 'rated_at', headerName: 'Rated At', width: 130, renderCell: (p) => fmtDate(p.value as string) },
   {
     field: 'taste',
     headerName: 'Score',

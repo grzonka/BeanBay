@@ -9,6 +9,7 @@ import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import TasteRadar, { cuppingToRadar } from '@/components/TasteRadar';
 import { useNotification } from '@/components/NotificationProvider';
+import { fmtDate, fmtDateTime } from '@/utils/date';
 import { useCupping, useDeleteCupping } from '../hooks';
 import CuppingFormDialog from '../components/CuppingFormDialog';
 
@@ -67,7 +68,7 @@ export default function CuppingDetailPage() {
 
   const radarData = cuppingToRadar(cupping);
   const cuppingLabel = cupping.cupped_at
-    ? `${cupping.person_name} — ${new Date(cupping.cupped_at).toLocaleDateString()}`
+    ? `${cupping.person_name} — ${fmtDate(cupping.cupped_at)}`
     : `Cupping by ${cupping.person_name}`;
 
   return (
@@ -116,7 +117,7 @@ export default function CuppingDetailPage() {
             <Box>
               <Typography variant="caption" color="text.secondary">Cupped At</Typography>
               <Typography variant="body1">
-                {cupping.cupped_at ? new Date(cupping.cupped_at).toLocaleString() : '—'}
+                {fmtDateTime(cupping.cupped_at)}
               </Typography>
             </Box>
             {cupping.cuppers_correction != null && cupping.cuppers_correction !== 0 && (

@@ -4,6 +4,7 @@ import { Chip, MenuItem, TextField } from '@mui/material';
 import PageHeader from '@/components/PageHeader';
 import DataTable from '@/components/DataTable';
 import { usePaginationParams } from '@/utils/pagination';
+import { fmtDate } from '@/utils/date';
 import { useBeans } from '@/features/beans/hooks';
 import { useAllBags, type BagListItem } from './hooks';
 
@@ -49,7 +50,7 @@ export default function BagsListPage() {
         field: 'roast_date',
         headerName: 'Roast Date',
         width: 130,
-        renderCell: (p) => p.row.roast_date ?? '—',
+        renderCell: (p) => fmtDate(p.row.roast_date),
       },
       {
         field: 'weight',

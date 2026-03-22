@@ -5,6 +5,7 @@ import { Add as AddIcon } from '@mui/icons-material';
 import PageHeader from '@/components/PageHeader';
 import DataTable from '@/components/DataTable';
 import { usePaginationParams } from '@/utils/pagination';
+import { fmtDateTime } from '@/utils/date';
 import { useCuppings, type Cupping } from '../hooks';
 import CuppingFormDialog from '../components/CuppingFormDialog';
 
@@ -20,7 +21,7 @@ const columns: GridColDef<Cupping>[] = [
     field: 'cupped_at',
     headerName: 'Cupped At',
     width: 180,
-    renderCell: (p) => p.value ? new Date(p.value as string).toLocaleString() : '—',
+    renderCell: (p) => fmtDateTime(p.value as string),
   },
 ];
 

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router';
 import PageHeader from '@/components/PageHeader';
 import DataTable from '@/components/DataTable';
 import { usePaginationParams } from '@/utils/pagination';
+import { fmtDate } from '@/utils/date';
 import { useBrews, type BrewListItem } from '../hooks';
 
 export default function BrewsListPage() {
@@ -47,7 +48,7 @@ export default function BrewsListPage() {
         field: 'brewed_at',
         headerName: 'Brewed',
         width: 150,
-        renderCell: (p) => new Date(p.row.brewed_at).toLocaleDateString(),
+        renderCell: (p) => fmtDate(p.row.brewed_at),
       },
       {
         field: 'is_failed',

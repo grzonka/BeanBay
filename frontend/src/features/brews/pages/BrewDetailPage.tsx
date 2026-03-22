@@ -24,6 +24,7 @@ import {
   getGrindRangeDisplay,
   getGrindPlaceholder,
 } from '@/utils/grindValidation';
+import { fmtDate, fmtDateTime } from '@/utils/date';
 import {
   useBrew, useUpdateBrew, useDeleteBrew,
   useUpsertBrewTaste, useDeleteBrewTaste,
@@ -35,11 +36,6 @@ import {
 function fmt(v: number | null | undefined, unit?: string): string {
   if (v == null) return '—';
   return unit ? `${v} ${unit}` : String(v);
-}
-
-function fmtDate(s: string | null | undefined): string {
-  if (!s) return '—';
-  return new Date(s).toLocaleString();
 }
 
 // ─── InfoRow ────────────────────────────────────────────────────────────────
@@ -677,8 +673,8 @@ export default function BrewDetailPage() {
   }
 
   const brewLabel = brew.bag?.bean_name
-    ? `${brew.bag.bean_name} — ${new Date(brew.brewed_at).toLocaleDateString()}`
-    : new Date(brew.brewed_at).toLocaleDateString();
+    ? `${brew.bag.bean_name} — ${fmtDate(brew.brewed_at)}`
+    : fmtDate(brew.brewed_at);
 
   return (
     <>

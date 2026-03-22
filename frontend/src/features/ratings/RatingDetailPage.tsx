@@ -11,6 +11,7 @@ import TasteRadar, { beanTasteToRadar } from '@/components/TasteRadar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FlavorTagSelect from '@/components/FlavorTagSelect';
 import { useNotification } from '@/components/NotificationProvider';
+import { fmtDateTime } from '@/utils/date';
 import { useRating, useDeleteRating, useUpsertBeanTaste, type BeanTaste } from './hooks';
 
 interface FlavorTag { id: string; name: string; }
@@ -171,7 +172,7 @@ export default function RatingDetailPage() {
         <CardContent>
           <Stack spacing={1.5}>
             <InfoRow label="Person" value={rating.person_name} />
-            <InfoRow label="Rated At" value={rating.rated_at} />
+            <InfoRow label="Rated At" value={fmtDateTime(rating.rated_at)} />
           </Stack>
         </CardContent>
       </Card>
