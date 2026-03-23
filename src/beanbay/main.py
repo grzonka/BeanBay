@@ -24,6 +24,7 @@ from beanbay.routers.cuppings import router as cuppings_router
 from beanbay.routers.ratings import router as ratings_router
 from beanbay.routers.optimize import router as optimize_router
 from beanbay.routers.stats import router as stats_router
+from beanbay.services.taskiq_broker import broker
 
 
 @asynccontextmanager
@@ -31,7 +32,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler.
 
     Run Alembic migrations to head, then seed default lookup data
-    and the default person record.
+    and the default person record.  Starts and stops the taskiq broker.
 
     Parameters
     ----------
@@ -55,7 +56,10 @@ async def lifespan(app: FastAPI):
         seed_default_person(session, settings.default_person_name)
         seed_method_parameter_defaults(session)
         session.commit()
+
+    await broker.startup()
     yield
+    await broker.shutdown()
 
 
 app = FastAPI(title="BeanBay", lifespan=lifespan)
