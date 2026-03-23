@@ -1,6 +1,7 @@
-"""Tests for optimization seed data and campaign CRUD endpoints."""
+"""Tests for optimization seed data, campaign CRUD, and recommendation endpoints."""
 
 import uuid
+from datetime import datetime, timezone
 
 from sqlmodel import select
 
@@ -392,3 +393,508 @@ class TestMethodDefaults:
         fake_id = str(uuid.uuid4())
         resp = client.get(f"{DEFAULTS}/{fake_id}")
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Helpers for recommendation endpoint tests
+# ---------------------------------------------------------------------------
+
+RECOMMEND = "/api/v1/optimize/campaigns/{campaign_id}/recommend"
+JOBS = "/api/v1/optimize/jobs"
+RECOMMENDATIONS = "/api/v1/optimize/recommendations"
+CAMPAIGN_RECS = "/api/v1/optimize/campaigns/{campaign_id}/recommendations"
+PEOPLE = "/api/v1/people"
+BREWS = "/api/v1/brews"
+
+
+def _setup_campaign(client, session):
+    """Seed data and create a campaign with a pour-over setup.
+
+    Uses the seeded 'pour-over' method which has 4 parameters
+    (temperature, dose, yield_amount, bloom_weight) -- none with
+    ``requires`` gates, so no brewer is needed.
+
+    Returns
+    -------
+    dict
+        Keys: campaign_id, bean_id, brew_setup_id, brew_method_id.
+    """
+    seed_brew_methods(session)
+    session.commit()
+    seed_method_parameter_defaults(session)
+    session.commit()
+
+    # Look up the seeded pour-over method
+    pour_over = session.exec(
+        select(BrewMethod).where(BrewMethod.name == "pour-over")
+    ).one()
+    method_id = str(pour_over.id)
+
+    bean_id = _create_bean(client, "Rec Bean")
+    setup_id = _create_brew_setup(client, method_id)
+
+    resp = client.post(
+        CAMPAIGNS,
+        json={"bean_id": bean_id, "brew_setup_id": setup_id},
+    )
+    assert resp.status_code == 201
+    campaign_id = resp.json()["id"]
+
+    return {
+        "campaign_id": campaign_id,
+        "bean_id": bean_id,
+        "brew_setup_id": setup_id,
+        "brew_method_id": method_id,
+    }
+
+
+def _create_person(client, name: str = "Tester") -> str:
+    """Create a person and return its id."""
+    resp = client.post(PEOPLE, json={"name": name})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def _create_bag(client, bean_id: str) -> str:
+    """Create a bag for a bean and return its id."""
+    resp = client.post(
+        f"{BEANS}/{bean_id}/bags", json={"weight": 250.0}
+    )
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def _create_brew(client, bag_id: str, setup_id: str, person_id: str) -> str:
+    """Create a brew and return its id."""
+    resp = client.post(
+        BREWS,
+        json={
+            "bag_id": bag_id,
+            "brew_setup_id": setup_id,
+            "person_id": person_id,
+            "dose": 18.0,
+            "brewed_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+# ---------------------------------------------------------------------------
+# Recommendation & Job tests
+# ---------------------------------------------------------------------------
+
+# These tests use the recommend_client / recommend_session fixtures from
+# the integration conftest.  Those fixtures share a StaticPool SQLite
+# engine so the taskiq broker task can see the same data.
+
+
+class TestRequestRecommendation:
+    """Tests for POST /optimize/campaigns/{id}/recommend."""
+
+    def test_recommend_returns_202_with_job_id(
+        self, recommend_client, recommend_session
+    ):
+        """POST /recommend -> 202, returns job_id and status."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+        assert resp.status_code == 202
+        data = resp.json()
+        assert "job_id" in data
+        assert data["status"] == "pending"
+        # job_id should be a valid UUID string
+        uuid.UUID(data["job_id"])
+
+    def test_recommend_nonexistent_campaign_404(
+        self, recommend_client, recommend_session
+    ):
+        """POST /recommend for a non-existent campaign -> 404."""
+        fake_id = str(uuid.uuid4())
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=fake_id)
+        )
+        assert resp.status_code == 404
+
+
+class TestGetJob:
+    """Tests for GET /optimize/jobs/{job_id}."""
+
+    def test_get_job_after_recommend(
+        self, recommend_client, recommend_session
+    ):
+        """GET /jobs/{id} returns job; with InMemoryBroker it may be completed."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        rec_resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+        job_id = rec_resp.json()["job_id"]
+
+        resp = recommend_client.get(f"{JOBS}/{job_id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == job_id
+        assert data["campaign_id"] == ids["campaign_id"]
+        assert data["job_type"] == "recommend"
+        # InMemoryBroker runs tasks inline, so job should be completed
+        assert data["status"] in ("pending", "completed")
+
+
+class TestListRecommendations:
+    """Tests for GET /optimize/campaigns/{id}/recommendations."""
+
+    def test_list_recommendations_after_recommend(
+        self, recommend_client, recommend_session
+    ):
+        """After requesting a recommendation, listing returns it."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+
+        resp = recommend_client.get(
+            CAMPAIGN_RECS.format(campaign_id=ids["campaign_id"])
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) >= 1
+        rec = data[0]
+        assert rec["campaign_id"] == ids["campaign_id"]
+        assert isinstance(rec["parameter_values"], dict)
+        assert rec["status"] == "pending"
+
+    def test_list_recommendations_nonexistent_campaign(
+        self, recommend_client, recommend_session
+    ):
+        """GET recommendations for non-existent campaign -> 404."""
+        fake_id = str(uuid.uuid4())
+        resp = recommend_client.get(
+            CAMPAIGN_RECS.format(campaign_id=fake_id)
+        )
+        assert resp.status_code == 404
+
+
+class TestGetRecommendation:
+    """Tests for GET /optimize/recommendations/{id}."""
+
+    def test_get_recommendation_detail(
+        self, recommend_client, recommend_session
+    ):
+        """GET recommendation detail has parameter_values as dict."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+
+        # List to get the recommendation id
+        list_resp = recommend_client.get(
+            CAMPAIGN_RECS.format(campaign_id=ids["campaign_id"])
+        )
+        rec_id = list_resp.json()[0]["id"]
+
+        resp = recommend_client.get(f"{RECOMMENDATIONS}/{rec_id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == rec_id
+        assert isinstance(data["parameter_values"], dict)
+        # Pour-over parameters: temperature, dose, yield_amount, bloom_weight
+        param_names = set(data["parameter_values"].keys())
+        expected = {"temperature", "dose", "yield_amount", "bloom_weight"}
+        assert param_names == expected
+
+
+class TestSkipRecommendation:
+    """Tests for POST /optimize/recommendations/{id}/skip."""
+
+    def test_skip_sets_status(
+        self, recommend_client, recommend_session
+    ):
+        """POST /skip -> status becomes 'skipped'."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+
+        list_resp = recommend_client.get(
+            CAMPAIGN_RECS.format(campaign_id=ids["campaign_id"])
+        )
+        rec_id = list_resp.json()[0]["id"]
+
+        resp = recommend_client.post(
+            f"{RECOMMENDATIONS}/{rec_id}/skip"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "skipped"
+        assert data["id"] == rec_id
+
+
+class TestLinkRecommendation:
+    """Tests for POST /optimize/recommendations/{id}/link."""
+
+    def test_link_with_valid_brew(
+        self, recommend_client, recommend_session
+    ):
+        """POST /link with valid brew_id -> status 'brewed', brew_id set."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+
+        list_resp = recommend_client.get(
+            CAMPAIGN_RECS.format(campaign_id=ids["campaign_id"])
+        )
+        rec_id = list_resp.json()[0]["id"]
+
+        # Create a brew to link
+        person_id = _create_person(recommend_client)
+        bag_id = _create_bag(recommend_client, ids["bean_id"])
+        brew_id = _create_brew(
+            recommend_client, bag_id, ids["brew_setup_id"], person_id
+        )
+
+        resp = recommend_client.post(
+            f"{RECOMMENDATIONS}/{rec_id}/link",
+            json={"brew_id": brew_id},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "brewed"
+        assert data["brew_id"] == brew_id
+
+    def test_link_with_invalid_brew_404(
+        self, recommend_client, recommend_session
+    ):
+        """POST /link with non-existent brew_id -> 404."""
+        ids = _setup_campaign(
+            recommend_client, recommend_session
+        )
+
+        recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+
+        list_resp = recommend_client.get(
+            CAMPAIGN_RECS.format(campaign_id=ids["campaign_id"])
+        )
+        rec_id = list_resp.json()[0]["id"]
+
+        fake_brew = str(uuid.uuid4())
+        resp = recommend_client.post(
+            f"{RECOMMENDATIONS}/{rec_id}/link",
+            json={"brew_id": fake_brew},
+        )
+        assert resp.status_code == 404
+        assert "Brew" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Helpers for person preferences tests
+# ---------------------------------------------------------------------------
+
+PREFERENCES = "/api/v1/optimize/people/{person_id}/preferences"
+FLAVOR_TAGS = "/api/v1/flavor-tags"
+ORIGINS = "/api/v1/origins"
+BAGS = "/api/v1/beans/{bean_id}/bags"
+TASTES = "/api/v1/brews/{brew_id}/taste"
+
+
+def _create_flavor_tag(client, name: str) -> str:
+    """Create a flavor tag and return its id."""
+    resp = client.post(FLAVOR_TAGS, json={"name": name})
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def _create_origin(client, name: str, country: str | None = None) -> str:
+    """Create an origin and return its id."""
+    payload: dict = {"name": name}
+    if country is not None:
+        payload["country"] = country
+    resp = client.post(ORIGINS, json=payload)
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def _create_bean_with_details(
+    client,
+    name: str,
+    roast_degree: float | None = None,
+    origin_ids: list[str] | None = None,
+) -> str:
+    """Create a bean with optional roast_degree and origins, return its id."""
+    payload: dict = {"name": name}
+    if roast_degree is not None:
+        payload["roast_degree"] = roast_degree
+    if origin_ids is not None:
+        payload["origin_ids"] = origin_ids
+    resp = client.post(BEANS, json=payload)
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+def _create_brew_with_taste(
+    client,
+    bag_id: str,
+    setup_id: str,
+    person_id: str,
+    score: float,
+    flavor_tag_ids: list[str] | None = None,
+) -> str:
+    """Create a brew with an inline taste and return the brew id."""
+    taste_payload: dict = {"score": score}
+    if flavor_tag_ids:
+        taste_payload["flavor_tag_ids"] = flavor_tag_ids
+    resp = client.post(
+        BREWS,
+        json={
+            "bag_id": bag_id,
+            "brew_setup_id": setup_id,
+            "person_id": person_id,
+            "dose": 18.0,
+            "brewed_at": datetime.now(timezone.utc).isoformat(),
+            "taste": taste_payload,
+        },
+    )
+    assert resp.status_code == 201
+    return resp.json()["id"]
+
+
+# ---------------------------------------------------------------------------
+# Person Preferences tests
+# ---------------------------------------------------------------------------
+
+
+class TestPersonPreferences:
+    """Tests for GET /api/v1/optimize/people/{person_id}/preferences."""
+
+    def test_person_with_brews(self, client):
+        """Person with brews returns populated preference data."""
+        # Create prerequisite entities
+        method_id = _create_brew_method(client, "espresso_pref1")
+        setup_id = _create_brew_setup(client, method_id)
+        person_id = _create_person(client, "Pref Tester")
+
+        # Create flavor tags
+        tag1_id = _create_flavor_tag(client, "chocolate_pref")
+        tag2_id = _create_flavor_tag(client, "fruity_pref")
+
+        # Create origin
+        origin_id = _create_origin(client, "Ethiopia Pref", country="Ethiopia")
+
+        # Create beans with roast degree and origin
+        bean1_id = _create_bean_with_details(
+            client, "Pref Bean 1", roast_degree=2.0, origin_ids=[origin_id]
+        )
+        bean2_id = _create_bean_with_details(
+            client, "Pref Bean 2", roast_degree=7.5, origin_ids=[origin_id]
+        )
+
+        # Create bags
+        bag1_id = _create_bag(client, bean1_id)
+        bag2_id = _create_bag(client, bean2_id)
+
+        # Create brews with taste scores and flavor tags
+        _create_brew_with_taste(
+            client, bag1_id, setup_id, person_id, score=8.5,
+            flavor_tag_ids=[tag1_id, tag2_id],
+        )
+        _create_brew_with_taste(
+            client, bag1_id, setup_id, person_id, score=7.0,
+            flavor_tag_ids=[tag1_id],
+        )
+        _create_brew_with_taste(
+            client, bag2_id, setup_id, person_id, score=9.0,
+        )
+
+        # Fetch preferences
+        resp = client.get(PREFERENCES.format(person_id=person_id))
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # person
+        assert data["person"]["id"] == person_id
+        assert data["person"]["name"] == "Pref Tester"
+
+        # brew_stats
+        assert data["brew_stats"]["total_brews"] == 3
+        assert data["brew_stats"]["avg_score"] is not None
+        avg = data["brew_stats"]["avg_score"]
+        assert abs(avg - (8.5 + 7.0 + 9.0) / 3) < 0.01
+
+        # top_beans — should have both beans, sorted by avg score
+        assert len(data["top_beans"]) == 2
+        # Bean 2 (9.0 avg) should be first
+        assert data["top_beans"][0]["name"] == "Pref Bean 2"
+        assert data["top_beans"][0]["brew_count"] == 1
+        assert abs(data["top_beans"][0]["avg_score"] - 9.0) < 0.01
+        # Bean 1 (7.75 avg)
+        assert data["top_beans"][1]["name"] == "Pref Bean 1"
+        assert data["top_beans"][1]["brew_count"] == 2
+
+        # flavor_profile — chocolate_pref appears 2x, fruity_pref 1x
+        assert len(data["flavor_profile"]) >= 1
+        tags_by_name = {f["tag"]: f["frequency"] for f in data["flavor_profile"]}
+        assert tags_by_name["chocolate_pref"] == 2
+        assert tags_by_name["fruity_pref"] == 1
+
+        # roast_preference
+        assert "avg_degree" in data["roast_preference"]
+        assert "distribution" in data["roast_preference"]
+        dist = data["roast_preference"]["distribution"]
+        # Bean 1 (2.0) = light, Bean 2 (7.5) = dark
+        assert dist["light"] >= 1
+        assert dist["dark"] >= 1
+
+        # origin_preferences
+        assert len(data["origin_preferences"]) >= 1
+        assert data["origin_preferences"][0]["origin"] == "Ethiopia"
+
+        # method_breakdown
+        assert len(data["method_breakdown"]) >= 1
+        assert data["method_breakdown"][0]["method"] == "espresso_pref1"
+        assert data["method_breakdown"][0]["brew_count"] == 3
+
+    def test_person_with_no_brews(self, client):
+        """Person with no brews returns empty/zero preference data."""
+        person_id = _create_person(client, "Empty Pref Tester")
+
+        resp = client.get(PREFERENCES.format(person_id=person_id))
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["person"]["id"] == person_id
+        assert data["brew_stats"]["total_brews"] == 0
+        assert data["brew_stats"]["avg_score"] is None
+        assert data["top_beans"] == []
+        assert data["flavor_profile"] == []
+        assert data["roast_preference"] == {}
+        assert data["origin_preferences"] == []
+        assert data["method_breakdown"] == []
+
+    def test_invalid_person_id(self, client):
+        """Non-existent person_id returns 404."""
+        fake_id = str(uuid.uuid4())
+        resp = client.get(PREFERENCES.format(person_id=fake_id))
+        assert resp.status_code == 404
+        assert "Person" in resp.json()["detail"]
