@@ -1,5 +1,6 @@
 // frontend/src/features/brews/components/BrewStepParams.tsx
 import {
+  Alert,
   Box,
   FormControlLabel,
   Stack,
@@ -9,6 +10,7 @@ import {
 } from '@mui/material';
 import AutocompleteCreate from '@/components/AutocompleteCreate';
 import apiClient from '@/api/client';
+import type { Recommendation } from '@/features/optimize/hooks';
 import {
   validateGrindDisplay,
   getGrindRangeDisplay,
@@ -37,14 +39,32 @@ interface BrewStepParamsProps {
   data: ParamsData;
   onChange: (patch: Partial<ParamsData>) => void;
   rings?: RingConfig[];
+  suggestion?: Recommendation | null;
+  suggestButton?: React.ReactNode;
 }
 
-export default function BrewStepParams({ data, onChange, rings }: BrewStepParamsProps) {
+export default function BrewStepParams({ data, onChange, rings, suggestion, suggestButton }: BrewStepParamsProps) {
   const grindError = rings && data.grind_setting_display.trim()
     ? validateGrindDisplay(data.grind_setting_display, rings)
     : null;
   return (
     <Stack spacing={2}>
+      {suggestButton && (
+        <Box sx={{ mb: 2 }}>
+          {suggestButton}
+        </Box>
+      )}
+
+      {suggestion && suggestion.predicted_score != null && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Suggested by optimizer ({suggestion.phase} phase)
+          {' — Predicted: ~'}{suggestion.predicted_score.toFixed(1)}
+          {suggestion.predicted_std != null && (
+            <> ({(suggestion.predicted_score - suggestion.predicted_std).toFixed(1)}–{(suggestion.predicted_score + suggestion.predicted_std).toFixed(1)})</>
+          )}
+        </Alert>
+      )}
+
       <Typography variant="body2" color="text.secondary">
         Enter brew parameters. Only dose is required.
       </Typography>

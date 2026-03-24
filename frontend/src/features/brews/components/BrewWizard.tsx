@@ -15,6 +15,8 @@ import { useNotification } from '@/components/NotificationProvider';
 import apiClient from '@/api/client';
 import { validateGrindDisplay } from '@/utils/grindValidation';
 import type { Grinder } from '@/features/equipment/hooks';
+import SuggestButton from '@/features/optimize/components/SuggestButton';
+import { useLinkRecommendation, type Recommendation } from '@/features/optimize/hooks';
 import { useCreateBrew } from '../hooks';
 import BrewStepSetup, { type SetupData } from './BrewStepSetup';
 import BrewStepParams, { type ParamsData } from './BrewStepParams';
@@ -88,6 +90,12 @@ export default function BrewWizard() {
 
   const [activeStep, setActiveStep] = useState(0);
   const [state, setState] = useState<WizardState>(initialState);
+  const [suggestion, setSuggestion] = useState<{
+    recommendation: Recommendation;
+    campaignId: string;
+  } | null>(null);
+
+  const linkRec = useLinkRecommendation();
 
   const grinderId = state.setup.brew_setup?.grinder_id ?? null;
   const { data: grinder } = useQuery<Grinder | null>({
@@ -108,6 +116,22 @@ export default function BrewWizard() {
 
   const patchTaste = (patch: Partial<TasteData>) =>
     setState((prev) => ({ ...prev, taste: { ...prev.taste, ...patch } }));
+
+  const handleSuggestion = (rec: Recommendation, campaignId: string) => {
+    setSuggestion({ recommendation: rec, campaignId });
+    const vals = rec.parameter_values;
+    const patch: Partial<ParamsData> = {};
+    if (vals.temperature != null) patch.temperature = String(vals.temperature);
+    if (vals.dose != null) patch.dose = String(vals.dose);
+    if (vals.yield_amount != null) patch.yield_amount = String(vals.yield_amount);
+    if (vals.pressure != null) patch.pressure = String(vals.pressure);
+    if (vals.flow_rate != null) patch.flow_rate = String(vals.flow_rate);
+    if (vals.pre_infusion_time != null) patch.pre_infusion_time = String(vals.pre_infusion_time);
+    if (vals.grind_setting_display != null) patch.grind_setting_display = String(vals.grind_setting_display);
+    if (vals.total_time != null) patch.total_time = String(vals.total_time);
+    // bloom_weight and other non-ParamsData fields are intentionally skipped
+    patchParams(patch);
+  };
 
   // Step validation
   const step0Valid =
@@ -175,6 +199,18 @@ export default function BrewWizard() {
   const handleSubmit = async (includeTaste: boolean) => {
     const body = buildBody(includeTaste);
     const newBrew = await createBrew.mutateAsync(body);
+
+    if (suggestion) {
+      try {
+        await linkRec.mutateAsync({
+          id: suggestion.recommendation.id,
+          brew_id: newBrew.id,
+        });
+      } catch {
+        // Non-critical — don't block navigation
+      }
+    }
+
     notify('Brew logged successfully!');
     navigate(`/brews/${newBrew.id}`);
   };
@@ -198,7 +234,21 @@ export default function BrewWizard() {
           <BrewStepSetup data={state.setup} onChange={patchSetup} />
         )}
         {activeStep === 1 && (
-          <BrewStepParams data={state.params} onChange={patchParams} rings={rings} />
+          <BrewStepParams
+            data={state.params}
+            onChange={patchParams}
+            rings={rings}
+            suggestion={suggestion?.recommendation ?? null}
+            suggestButton={
+              state.setup.bag && state.setup.brew_setup ? (
+                <SuggestButton
+                  beanId={state.setup.bag.bean_id}
+                  brewSetupId={state.setup.brew_setup.id}
+                  onSuggestion={handleSuggestion}
+                />
+              ) : undefined
+            }
+          />
         )}
         {activeStep === 2 && (
           <BrewStepTaste data={state.taste} onChange={patchTaste} />
