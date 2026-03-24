@@ -1,6 +1,8 @@
 import { useTheme } from '@mui/material';
-import Plot from 'react-plotly.js';
-import type Plotly from 'plotly.js-dist-min';
+import createPlotlyComponent from 'react-plotly.js/factory';
+import Plotly from 'plotly.js-dist-min';
+
+const Plot = createPlotlyComponent(Plotly);
 
 interface PlotlyChartProps {
   data: Plotly.Data[];
