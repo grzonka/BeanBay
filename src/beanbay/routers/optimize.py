@@ -42,6 +42,7 @@ from beanbay.schemas.optimization import (
     PersonPreferences,
     PosteriorResponse,
     RecommendationRead,
+    RecommendRequest,
     ScoreHistoryEntry,
     TasteProfile,
     TopBean,
@@ -994,6 +995,7 @@ class RecommendationLinkPayload(SQLModel):
 async def request_recommendation(
     campaign_id: uuid.UUID,
     session: SessionDep,
+    body: RecommendRequest | None = None,
 ) -> dict:
     """Kick off an async BayBE recommendation.
 
@@ -1007,6 +1009,8 @@ async def request_recommendation(
         Primary key of the campaign.
     session : SessionDep
         Database session.
+    body : RecommendRequest | None
+        Optional request body with ``person_id`` and ``mode``.
 
     Returns
     -------
@@ -1022,10 +1026,15 @@ async def request_recommendation(
     if campaign is None:
         raise HTTPException(status_code=404, detail="Campaign not found.")
 
+    person_id = body.person_id if body else None
+    mode = body.mode if body else "auto"
+
     job = OptimizationJob(
         campaign_id=campaign_id,
         job_type="recommend",
         status="pending",
+        person_id=person_id,
+        optimization_mode=mode,
     )
     session.add(job)
     session.commit()

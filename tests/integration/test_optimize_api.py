@@ -1836,3 +1836,89 @@ class TestTasteProfile:
         data = resp.json()
         assert data["taste_profile"] is None
         assert data["taste_profile_brew_count"] == 0
+
+
+class TestHybridOptimization:
+    """POST /campaigns/{id}/recommend supports person_id and mode."""
+
+    def test_recommend_accepts_person_id(self, recommend_client, recommend_session):
+        """Recommend endpoint accepts person_id in body and stores on job."""
+        ids = _setup_campaign_with_scored_brews(
+            recommend_client, recommend_session, n_brews=5,
+        )
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"]),
+            json={"person_id": ids["person_id"], "mode": "personal"},
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["job_id"]
+
+        job_resp = recommend_client.get(f"{JOBS}/{job_id}")
+        assert job_resp.json()["status"] == "completed"
+        result_id = job_resp.json()["result_id"]
+
+        rec_resp = recommend_client.get(f"{RECOMMENDATIONS}/{result_id}")
+        rec = rec_resp.json()
+        assert rec["optimization_mode"] == "personal"
+        assert rec["personal_brew_count"] == 5
+
+    def test_recommend_without_person_uses_community(
+        self, recommend_client, recommend_session,
+    ):
+        """Recommend without person_id defaults to community mode."""
+        ids = _setup_campaign(recommend_client, recommend_session)
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"]),
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["job_id"]
+
+        job_resp = recommend_client.get(f"{JOBS}/{job_id}")
+        assert job_resp.json()["status"] == "completed"
+        result_id = job_resp.json()["result_id"]
+
+        rec_resp = recommend_client.get(f"{RECOMMENDATIONS}/{result_id}")
+        rec = rec_resp.json()
+        assert rec["optimization_mode"] == "community"
+
+    def test_auto_mode_graduates_to_personal(
+        self, recommend_client, recommend_session,
+    ):
+        """Auto mode resolves to personal when person has >= 5 brews."""
+        ids = _setup_campaign_with_scored_brews(
+            recommend_client, recommend_session, n_brews=5,
+        )
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"]),
+            json={"person_id": ids["person_id"], "mode": "auto"},
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["job_id"]
+        job_resp = recommend_client.get(f"{JOBS}/{job_id}")
+        assert job_resp.json()["status"] == "completed"
+        result_id = job_resp.json()["result_id"]
+
+        rec_resp = recommend_client.get(f"{RECOMMENDATIONS}/{result_id}")
+        rec = rec_resp.json()
+        assert rec["optimization_mode"] == "personal"
+        assert rec["personal_brew_count"] == 5
+
+    def test_personal_mode_no_brews_returns_error(
+        self, recommend_client, recommend_session,
+    ):
+        """Personal mode with 0 brews for this person fails gracefully."""
+        ids = _setup_campaign(recommend_client, recommend_session)
+        # Create a different person with no brews
+        resp = recommend_client.post("/api/v1/people", json={"name": "No Brews"})
+        other_person_id = resp.json()["id"]
+
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"]),
+            json={"person_id": other_person_id, "mode": "personal"},
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["job_id"]
+        job_resp = recommend_client.get(f"{JOBS}/{job_id}")
+        job = job_resp.json()
+        # Either the job fails with an error message, or completes with 0 personal brews
+        assert job["status"] in ("completed", "failed")

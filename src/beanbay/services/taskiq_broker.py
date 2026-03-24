@@ -6,6 +6,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 from taskiq import InMemoryBroker
 
@@ -63,6 +64,10 @@ async def generate_recommendation(job_id: str) -> None:
                 session.commit()
                 return
 
+            # 2b. Read person context from job
+            person_id = job.person_id
+            requested_mode = job.optimization_mode or "auto"
+
             # 3. Load setup, brewer, grinder
             setup = session.get(BrewSetup, campaign_row.brew_setup_id)
             brewer = session.get(Brewer, setup.brewer_id) if setup.brewer_id else None
@@ -105,7 +110,30 @@ async def generate_recommendation(job_id: str) -> None:
                 # Build fresh campaign
                 baybe_campaign = OptimizerService.build_campaign(effective_ranges)
 
-            # 8. Query valid measurements (not failed, has score)
+            # 8a. Resolve optimization mode
+            if requested_mode == "auto" and person_id is not None:
+                personal_count_stmt = (
+                    select(func.count())
+                    .select_from(Brew)
+                    .join(Bag, Brew.bag_id == Bag.id)
+                    .join(BrewTaste, Brew.id == BrewTaste.brew_id)
+                    .where(
+                        Bag.bean_id == campaign_row.bean_id,
+                        Brew.brew_setup_id == campaign_row.brew_setup_id,
+                        Brew.person_id == person_id,
+                        Brew.is_failed == False,  # noqa: E712
+                        Brew.retired_at.is_(None),  # type: ignore[union-attr]
+                        BrewTaste.score.is_not(None),  # type: ignore[union-attr]
+                    )
+                )
+                personal_count = session.exec(personal_count_stmt).one()
+                resolved_mode = "personal" if personal_count >= 5 else "community"
+            elif requested_mode == "personal":
+                resolved_mode = "personal"
+            else:
+                resolved_mode = "community"
+
+            # 8b. Query valid measurements (not failed, has score)
             stmt = (
                 select(Brew)
                 .join(Bag, Brew.bag_id == Bag.id)
@@ -118,20 +146,30 @@ async def generate_recommendation(job_id: str) -> None:
                     BrewTaste.score.is_not(None),  # type: ignore[union-attr]
                 )
             )
+            if resolved_mode == "personal" and person_id is not None:
+                stmt = stmt.where(Brew.person_id == person_id)
             brews = session.exec(stmt).all()
 
             # 9. Build measurements DataFrame
             param_names = [r.parameter_name for r in effective_ranges]
+            range_midpoints = {
+                r.parameter_name: (r.min_value + r.max_value) / 2
+                for r in effective_ranges
+                if r.min_value is not None and r.max_value is not None
+            }
             if brews:
                 rows = []
                 for brew in brews:
                     row = {}
                     for pname in param_names:
-                        row[pname] = getattr(brew, pname, None)
+                        val = getattr(brew, pname, None)
+                        if val is None:
+                            val = range_midpoints.get(pname)
+                        row[pname] = val
                     row["score"] = brew.taste.score
                     rows.append(row)
                 measurements_df = pd.DataFrame(rows)
-                # Drop rows with None values in any parameter column
+                # Drop rows still missing values (e.g. categorical with no default)
                 measurements_df = measurements_df.dropna(subset=param_names)
             else:
                 measurements_df = None
@@ -146,6 +184,16 @@ async def generate_recommendation(job_id: str) -> None:
 
             # Remove 'score' key if present (it's the target, not a parameter)
             rounded_values.pop("score", None)
+
+            # Add grind_setting_display if grinder is attached
+            if grinder is not None and "grind_setting" in rounded_values:
+                from beanbay.utils.grinder_display import to_display
+
+                ring_sizes = json.loads(grinder.ring_sizes_json or "[]")
+                if ring_sizes:
+                    rounded_values["grind_setting_display"] = to_display(
+                        rounded_values["grind_setting"], ring_sizes
+                    )
 
             # 12. Determine phase and stats
             valid_count = len(measurements_df) if measurements_df is not None else 0
@@ -162,6 +210,12 @@ async def generate_recommendation(job_id: str) -> None:
                 phase=phase,
                 parameter_values=json.dumps(rounded_values),
                 status="pending",
+                optimization_mode=resolved_mode,
+                personal_brew_count=(
+                    len(brews)
+                    if resolved_mode == "personal" and person_id is not None
+                    else None
+                ),
             )
             session.add(rec)
             session.flush()
