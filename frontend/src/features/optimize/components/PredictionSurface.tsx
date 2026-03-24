@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Skeleton, Typography } from '@mui/material';
 import PlotlyChart from '@/components/PlotlyChart';
 import { usePosterior } from '../hooks';
 import ParamSelector from './ParamSelector';
@@ -9,9 +9,11 @@ interface Props { campaignId: string; params: string[]; defaultX: string; defaul
 export default function PredictionSurface({ campaignId, params, defaultX, defaultY }: Props) {
   const [xParam, setXParam] = useState(defaultX);
   const [yParam, setYParam] = useState(defaultY);
-  const { data, isError } = usePosterior(campaignId, `${xParam},${yParam}`, 20);
+  const { data, isLoading, isError } = usePosterior(campaignId, `${xParam},${yParam}`, 20);
 
   if (params.length < 2) return null;
+  if (isLoading) return (<><ParamSelector params={params} xValue={xParam} yValue={yParam} onXChange={setXParam} onYChange={setYParam} />
+    <Skeleton variant="rectangular" height={450} /></>);
   if (isError || !data) return (<><ParamSelector params={params} xValue={xParam} yValue={yParam} onXChange={setXParam} onYChange={setYParam} />
     <Box sx={{ p: 2, textAlign: 'center' }}><Typography color="text.secondary">Need more data for prediction surface</Typography></Box></>);
 

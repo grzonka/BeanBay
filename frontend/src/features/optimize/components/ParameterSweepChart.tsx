@@ -1,4 +1,4 @@
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Skeleton, Typography, useTheme } from '@mui/material';
 import PlotlyChart from '@/components/PlotlyChart';
 import { usePosterior } from '../hooks';
 
@@ -8,7 +8,7 @@ export default function ParameterSweepChart({ campaignId, param }: Props) {
   const theme = useTheme();
   const { data, isLoading, isError } = usePosterior(campaignId, param, 50);
 
-  if (isLoading) return <Typography color="text.secondary">Loading...</Typography>;
+  if (isLoading) return <Box><Typography variant="subtitle2" gutterBottom>{param.replace(/_/g, ' ')}</Typography><Skeleton variant="rectangular" height={280} /></Box>;
   if (isError || !data) return <Box sx={{ p: 2, textAlign: 'center' }}><Typography color="text.secondary">Need more data for {param}</Typography></Box>;
 
   const xValues = data.grid[0];
