@@ -9,6 +9,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    include: ['react-plotly.js/factory', 'plotly.js-dist-min'],
+    needsInterop: ['react-plotly.js/factory'],
+  },
   server: {
     proxy: {
       '/api': {
