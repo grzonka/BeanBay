@@ -11,10 +11,9 @@ import DataTable from '@/components/DataTable';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { usePaginationParams } from '@/utils/pagination';
 import { useNotification } from '@/components/NotificationProvider';
-import { fmtDate, fmtDateTime } from '@/utils/date';
+import { fmtDate } from '@/utils/date';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/api/client';
-import { useNavigate } from 'react-router';
 import {
   useBean, useDeleteBean, useBags, useDeleteBag, useUpdateBag, useBeanRatings,
   type Bean, type Bag, type BeanRating,
@@ -283,7 +282,6 @@ const cuppingColumns: GridColDef<CuppingSummary>[] = [
 ];
 
 function CuppingsSection({ beanId, bags }: { beanId: string; bags: Bag[] }) {
-  const navigate = useNavigate();
   const bagIds = bags.map((b) => b.id);
 
   const { data, isLoading } = useQuery<CuppingSummary[]>({

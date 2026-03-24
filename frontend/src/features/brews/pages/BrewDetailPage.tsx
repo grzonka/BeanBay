@@ -24,7 +24,7 @@ import {
   getGrindRangeDisplay,
   getGrindPlaceholder,
 } from '@/utils/grindValidation';
-import { fmtDate, fmtDateTime } from '@/utils/date';
+import { fmtDate } from '@/utils/date';
 import {
   useBrew, useUpdateBrew, useDeleteBrew,
   useUpsertBrewTaste, useDeleteBrewTaste,
