@@ -27,6 +27,8 @@ export interface CampaignDetail extends CampaignListItem {
   brew_setup_id: string;
   updated_at: string;
   effective_ranges: EffectiveRange[];
+  convergence: ConvergenceInfo | null;
+  score_history: ScoreHistoryEntry[];
 }
 
 export interface ScoreHistoryEntry {
@@ -88,6 +90,15 @@ export interface PersonPreferences {
   roast_preference: Record<string, unknown>;
   origin_preferences: Record<string, unknown>[];
   method_breakdown: Record<string, unknown>[];
+  taste_profile: {
+    acidity: number | null;
+    sweetness: number | null;
+    body: number | null;
+    bitterness: number | null;
+    balance: number | null;
+    aftertaste: number | null;
+  } | null;
+  taste_profile_brew_count: number;
 }
 
 // ─── Query Hooks ─────────────────────────────────────────────────────────────

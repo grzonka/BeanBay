@@ -11,6 +11,7 @@ import FlavorRadar from '../components/FlavorRadar';
 import RoastDonut from '../components/RoastDonut';
 import OriginPreferences from '../components/OriginPreferences';
 import MethodBreakdown from '../components/MethodBreakdown';
+import TasteRadar, { type TasteDataPoint } from '@/components/TasteRadar';
 import type { Person } from '../hooks';
 
 export default function PersonPreferencesPage() {
@@ -21,7 +22,7 @@ export default function PersonPreferencesPage() {
   if (isLoading) return <LinearProgress />;
   if (!data) return null;
 
-  const { person, brew_stats, top_beans, flavor_profile, roast_preference, origin_preferences, method_breakdown } = data;
+  const { person, brew_stats, top_beans, flavor_profile, roast_preference, origin_preferences, method_breakdown, taste_profile, taste_profile_brew_count } = data;
 
   const brewStats = brew_stats as { total_brews: number; avg_score?: number; favorite_method?: string };
   const topBeans = top_beans as { name: string; avg_score: number; brew_count: number }[];
@@ -60,6 +61,16 @@ export default function PersonPreferencesPage() {
             <Section title="Top Beans"><TopBeansChart beans={topBeans} /></Section>
           </Grid>
         )}
+        {taste_profile && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Section title="Taste Profile">
+              <Typography variant="body2" color="text.secondary" gutterBottom>
+                Based on your {taste_profile_brew_count} best brews
+              </Typography>
+              <TasteRadar data={profileToRadar(taste_profile)} size={300} />
+            </Section>
+          </Grid>
+        )}
         {flavorProfileArray.length > 0 && (
           <Grid size={{ xs: 12, md: 6 }}>
             <Section title="Flavor Profile"><FlavorRadar profile={flavorProfileArray} /></Section>
@@ -83,6 +94,17 @@ export default function PersonPreferencesPage() {
       </Grid>
     </Box>
   );
+}
+
+function profileToRadar(profile: { acidity: number | null; sweetness: number | null; body: number | null; bitterness: number | null; balance: number | null; aftertaste: number | null }): TasteDataPoint[] {
+  return [
+    { axis: 'Acidity', value: profile.acidity ?? 0 },
+    { axis: 'Sweetness', value: profile.sweetness ?? 0 },
+    { axis: 'Body', value: profile.body ?? 0 },
+    { axis: 'Bitterness', value: profile.bitterness ?? 0 },
+    { axis: 'Balance', value: profile.balance ?? 0 },
+    { axis: 'Aftertaste', value: profile.aftertaste ?? 0 },
+  ];
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
