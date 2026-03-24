@@ -2,12 +2,16 @@
 import {
   Alert,
   Box,
+  Chip,
   FormControlLabel,
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import PeopleIcon from '@mui/icons-material/Person';
+import GroupsIcon from '@mui/icons-material/Groups';
 import AutocompleteCreate from '@/components/AutocompleteCreate';
 import apiClient from '@/api/client';
 import type { Recommendation } from '@/features/optimize/hooks';
@@ -41,12 +45,23 @@ interface BrewStepParamsProps {
   rings?: RingConfig[];
   suggestion?: Recommendation | null;
   suggestButton?: React.ReactNode;
+  onToggleMode?: () => void;
 }
 
-export default function BrewStepParams({ data, onChange, rings, suggestion, suggestButton }: BrewStepParamsProps) {
+export default function BrewStepParams({ data, onChange, rings, suggestion, suggestButton, onToggleMode }: BrewStepParamsProps) {
   const grindError = rings && data.grind_setting_display.trim()
     ? validateGrindDisplay(data.grind_setting_display, rings)
     : null;
+
+  const mode = suggestion?.optimization_mode;
+  const isPersonal = mode === 'personal';
+  const modeLabel = isPersonal
+    ? `Personal${suggestion?.personal_brew_count != null ? ` (${suggestion.personal_brew_count})` : ''}`
+    : 'Community';
+  const modeTooltip = isPersonal
+    ? 'Using only your brews. Click to switch to community data.'
+    : 'Using all brews for this bean + setup. Click to switch to your brews only.';
+
   return (
     <Stack spacing={2}>
       {suggestButton && (
@@ -56,7 +71,21 @@ export default function BrewStepParams({ data, onChange, rings, suggestion, sugg
       )}
 
       {suggestion && suggestion.predicted_score != null && (
-        <Alert severity="info" sx={{ mb: 2 }}>
+        <Alert severity="info" sx={{ mb: 2 }}
+          action={mode && onToggleMode ? (
+            <Tooltip title={modeTooltip} arrow>
+              <Chip
+                icon={isPersonal ? <PeopleIcon /> : <GroupsIcon />}
+                label={modeLabel}
+                size="small"
+                color={isPersonal ? 'success' : 'default'}
+                onClick={onToggleMode}
+                clickable
+                sx={{ mr: 1 }}
+              />
+            </Tooltip>
+          ) : undefined}
+        >
           Suggested by optimizer ({suggestion.phase} phase)
           {' — Predicted: ~'}{suggestion.predicted_score.toFixed(1)}
           {suggestion.predicted_std != null && (

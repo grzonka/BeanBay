@@ -16,7 +16,7 @@ import apiClient from '@/api/client';
 import { validateGrindDisplay } from '@/utils/grindValidation';
 import type { Grinder } from '@/features/equipment/hooks';
 import SuggestButton from '@/features/optimize/components/SuggestButton';
-import { useLinkRecommendation, type Recommendation } from '@/features/optimize/hooks';
+import { useLinkRecommendation, useSuggest, type Recommendation } from '@/features/optimize/hooks';
 import { useCreateBrew } from '../hooks';
 import BrewStepSetup, { type SetupData } from './BrewStepSetup';
 import BrewStepParams, { type ParamsData } from './BrewStepParams';
@@ -96,6 +96,7 @@ export default function BrewWizard() {
   } | null>(null);
 
   const linkRec = useLinkRecommendation();
+  const suggest = useSuggest();
 
   const grinderId = state.setup.brew_setup?.grinder_id ?? null;
   const { data: grinder } = useQuery<Grinder | null>({
@@ -131,6 +132,23 @@ export default function BrewWizard() {
     if (vals.total_time != null) patch.total_time = String(vals.total_time);
     // bloom_weight and other non-ParamsData fields are intentionally skipped
     patchParams(patch);
+  };
+
+  const handleToggleMode = async () => {
+    if (!state.setup.bag || !state.setup.brew_setup) return;
+    const currentMode = suggestion?.recommendation.optimization_mode;
+    const newMode = currentMode === 'personal' ? 'community' : 'personal';
+    try {
+      const rec = await suggest.mutateAsync({
+        bean_id: state.setup.bag.bean_id,
+        brew_setup_id: state.setup.brew_setup.id,
+        person_id: state.setup.person?.id,
+        mode: newMode,
+      });
+      handleSuggestion(rec, rec.campaign_id);
+    } catch {
+      // Keep current suggestion on failure
+    }
   };
 
   // Step validation
@@ -239,6 +257,7 @@ export default function BrewWizard() {
             onChange={patchParams}
             rings={rings}
             suggestion={suggestion?.recommendation ?? null}
+            onToggleMode={suggestion ? handleToggleMode : undefined}
             suggestButton={
               state.setup.bag && state.setup.brew_setup ? (
                 <SuggestButton
