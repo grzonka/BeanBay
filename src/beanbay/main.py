@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session
 
 from beanbay.config import settings
@@ -28,7 +31,7 @@ from beanbay.services.taskiq_broker import broker
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Application lifespan handler.
 
     Creates database tables, seeds default lookup data and the default
@@ -36,7 +39,7 @@ async def lifespan(app: FastAPI):
 
     Parameters
     ----------
-    app : FastAPI
+    _app : FastAPI
         The FastAPI application instance.
     """
     from sqlmodel import SQLModel
@@ -79,3 +82,14 @@ for _router in _routers:
 def health() -> dict[str, str]:
     """Return a simple health check response."""
     return {"status": "ok"}
+
+
+# --- Static file serving (production builds) ---
+_static_dir = Path(__file__).parent / "static"
+if _static_dir.is_dir():
+    app.mount("/assets", StaticFiles(directory=_static_dir / "assets"))
+
+    @app.get("/{path:path}", include_in_schema=False)
+    async def _spa_catch_all(path: str) -> FileResponse:
+        """Serve index.html for all non-API routes (SPA client-side routing)."""
+        return FileResponse(_static_dir / "index.html")
