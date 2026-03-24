@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Box, Button, Card, CardContent, Chip, CircularProgress,
   Dialog, DialogActions, DialogContent, DialogTitle,
-  Divider, Grid, Slider, Stack, TextField, Typography,
+  Divider, Grid, IconButton, Slider, Stack, TextField, Typography,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Archive as ArchiveIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
@@ -155,24 +156,42 @@ function TasteSlider({
 }: {
   label: string;
   name: string;
-  value: number;
-  onChange: (name: string, v: number) => void;
+  value: number | null;
+  onChange: (name: string, v: number | null) => void;
 }) {
+  const isOff = value === null;
   return (
-    <Stack spacing={0.5}>
-      <Stack direction="row" justifyContent="space-between">
-        <Typography variant="body2">{label}</Typography>
-        <Typography variant="body2" color="text.secondary">{value}</Typography>
-      </Stack>
+    <Box sx={{ px: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography variant="body2" color={isOff ? 'text.disabled' : 'text.primary'}>
+          {label}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Typography variant="body2" color={isOff ? 'text.disabled' : 'text.primary'}>
+            {isOff ? '—' : value.toFixed(1)}
+          </Typography>
+          {!isOff && (
+            <IconButton size="small" onClick={() => onChange(name, null)} sx={{ p: 0.25 }}>
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+          )}
+        </Box>
+      </Box>
       <Slider
-        value={value}
+        value={value ?? 5}
+        onChange={(_, v) => onChange(name, v as number)}
         min={0}
         max={10}
         step={0.5}
-        onChange={(_, v) => onChange(name, v as number)}
         size="small"
+        sx={{ opacity: isOff ? 0.3 : 1 }}
       />
-    </Stack>
+      {isOff && (
+        <Typography variant="caption" color="text.disabled" sx={{ mt: -1, display: 'block' }}>
+          Tap to rate
+        </Typography>
+      )}
+    </Box>
   );
 }
 
@@ -180,12 +199,12 @@ function TasteSlider({
 
 interface TasteFormState {
   score: number;
-  acidity: number;
-  sweetness: number;
-  body: number;
-  bitterness: number;
-  balance: number;
-  aftertaste: number;
+  acidity: number | null;
+  sweetness: number | null;
+  body: number | null;
+  bitterness: number | null;
+  balance: number | null;
+  aftertaste: number | null;
   notes: string;
   flavor_tags: { id: string; name: string }[];
 }
@@ -193,12 +212,12 @@ interface TasteFormState {
 function defaultTasteForm(taste?: BrewTaste | null): TasteFormState {
   return {
     score: taste?.score ?? 7,
-    acidity: taste?.acidity ?? 5,
-    sweetness: taste?.sweetness ?? 5,
-    body: taste?.body ?? 5,
-    bitterness: taste?.bitterness ?? 5,
-    balance: taste?.balance ?? 5,
-    aftertaste: taste?.aftertaste ?? 5,
+    acidity: taste?.acidity ?? null,
+    sweetness: taste?.sweetness ?? null,
+    body: taste?.body ?? null,
+    bitterness: taste?.bitterness ?? null,
+    balance: taste?.balance ?? null,
+    aftertaste: taste?.aftertaste ?? null,
     notes: taste?.notes ?? '',
     flavor_tags: taste?.flavor_tags ?? [],
   };
@@ -231,7 +250,7 @@ function TasteFormDialog({
   // reset form when dialog opens
   const handleOpen = () => setForm(defaultTasteForm(existingTaste));
 
-  const handleSlider = (name: string, v: number) =>
+  const handleSlider = (name: string, v: number | null) =>
     setForm((prev) => ({ ...prev, [name]: v }));
 
   const handleSubmit = async () => {
