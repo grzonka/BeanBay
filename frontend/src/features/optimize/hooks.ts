@@ -185,12 +185,13 @@ interface SuggestParams {
 interface JobStatus {
   job_id: string;
   status: string;
-  result?: { recommendation_id: string };
+  result_id: string | null;
+  error_message: string | null;
 }
 
 async function pollJobUntilDone(jobId: string, maxAttempts = 30, delayMs = 1000): Promise<JobStatus> {
   for (let i = 0; i < maxAttempts; i++) {
-    const { data } = await apiClient.get<JobStatus>(`/jobs/${jobId}`);
+    const { data } = await apiClient.get<JobStatus>(`/optimize/jobs/${jobId}`);
     if (data.status === 'completed' || data.status === 'failed') {
       return data;
     }
@@ -207,19 +208,17 @@ export function useSuggest() {
       const { data: campaign } = await apiClient.post('/optimize/campaigns', params);
 
       // Step 2: Request a recommendation
-      const { data: jobRef } = await apiClient.post(`/optimize/recommend`, {
-        campaign_id: campaign.id,
-      });
+      const { data: jobRef } = await apiClient.post(`/optimize/campaigns/${campaign.id}/recommend`);
 
       // Step 3: Poll job until done
       const job = await pollJobUntilDone(jobRef.job_id);
-      if (job.status === 'failed' || !job.result?.recommendation_id) {
-        throw new Error('Recommendation job failed');
+      if (job.status === 'failed' || !job.result_id) {
+        throw new Error(job.error_message || 'Recommendation job failed');
       }
 
       // Step 4: Fetch the completed recommendation
       const { data: recommendation } = await apiClient.get<Recommendation>(
-        `/optimize/recommendations/${job.result.recommendation_id}`,
+        `/optimize/recommendations/${job.result_id}`,
       );
       return recommendation;
     },
