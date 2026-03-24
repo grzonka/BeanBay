@@ -166,6 +166,23 @@ async def generate_recommendation(job_id: str) -> None:
             session.add(rec)
             session.flush()
 
+            # 13b. Populate predicted score/std if model is trained
+            if valid_count >= 2:
+                try:
+                    rec_df = pd.DataFrame([rounded_values])
+                    posterior = baybe_campaign.posterior_stats(rec_df)
+                    rec.predicted_score = round(
+                        float(posterior["score_mean"].iloc[0]), 4
+                    )
+                    rec.predicted_std = round(
+                        float(posterior["score_std"].iloc[0]), 4
+                    )
+                except Exception:
+                    logger.warning(
+                        "Could not compute posterior stats for rec %s",
+                        rec.id,
+                    )
+
             # 14. Update campaign state
             campaign_row.campaign_json = baybe_campaign.to_json()
             campaign_row.phase = phase

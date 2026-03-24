@@ -1295,3 +1295,82 @@ class TestFeatureImportance:
             IMPORTANCE.format(campaign_id=fake_id)
         )
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Predicted Score Population tests
+# ---------------------------------------------------------------------------
+
+
+class TestPredictedScorePopulation:
+    """Verify taskiq worker populates predicted_score/predicted_std."""
+
+    def test_recommendation_has_predicted_score_with_measurements(
+        self, recommend_client, recommend_session
+    ):
+        """After recommend with 3 measurements, predicted_score is set."""
+        ids = _setup_campaign(recommend_client, recommend_session)
+        person_id = _create_person(recommend_client, "Scorer")
+        bag_id = _create_bag(recommend_client, ids["bean_id"])
+
+        # Create 3 brews with full pour-over parameter values and taste scores
+        param_sets = [
+            {"temperature": 90.0, "dose": 15.0, "yield_amount": 250.0, "bloom_weight": 40.0},
+            {"temperature": 93.0, "dose": 18.0, "yield_amount": 300.0, "bloom_weight": 50.0},
+            {"temperature": 96.0, "dose": 20.0, "yield_amount": 350.0, "bloom_weight": 60.0},
+        ]
+        for params, score in zip(param_sets, [6.0, 7.0, 8.0]):
+            resp = recommend_client.post(
+                BREWS,
+                json={
+                    "bag_id": bag_id,
+                    "brew_setup_id": ids["brew_setup_id"],
+                    "person_id": person_id,
+                    "brewed_at": datetime.now(timezone.utc).isoformat(),
+                    "taste": {"score": score},
+                    **params,
+                },
+            )
+            assert resp.status_code == 201
+
+        # Request recommendation (InMemoryBroker runs inline)
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["job_id"]
+
+        # Get job result
+        job_resp = recommend_client.get(f"{JOBS}/{job_id}")
+        assert job_resp.json()["status"] == "completed"
+        result_id = job_resp.json()["result_id"]
+
+        # Get recommendation detail
+        rec_resp = recommend_client.get(f"{RECOMMENDATIONS}/{result_id}")
+        assert rec_resp.status_code == 200
+        rec = rec_resp.json()
+        assert rec["predicted_score"] is not None
+        assert rec["predicted_std"] is not None
+        assert isinstance(rec["predicted_score"], (int, float))
+        assert isinstance(rec["predicted_std"], (int, float))
+        assert rec["predicted_std"] >= 0
+
+    def test_recommendation_no_predicted_score_without_measurements(
+        self, recommend_client, recommend_session
+    ):
+        """Recommendation with 0 measurements has null predicted_score."""
+        ids = _setup_campaign(recommend_client, recommend_session)
+
+        resp = recommend_client.post(
+            RECOMMEND.format(campaign_id=ids["campaign_id"])
+        )
+        assert resp.status_code == 202
+        job_id = resp.json()["job_id"]
+
+        job_resp = recommend_client.get(f"{JOBS}/{job_id}")
+        assert job_resp.json()["status"] == "completed"
+        result_id = job_resp.json()["result_id"]
+
+        rec_resp = recommend_client.get(f"{RECOMMENDATIONS}/{result_id}")
+        rec = rec_resp.json()
+        assert rec["predicted_score"] is None
