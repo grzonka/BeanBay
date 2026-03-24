@@ -4,7 +4,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Query
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from beanbay.database import get_session
 from beanbay.models.person import Person
@@ -16,19 +16,19 @@ def _resolve_person_id(
     session: SessionDep,
     person_id: uuid.UUID | None = Query(default=None),
 ) -> uuid.UUID | None:
-    """Resolve an optional person_id, falling back to the default person.
+    """Resolve an optional person_id query parameter.
 
     Parameters
     ----------
     session : Session
         Database session.
     person_id : uuid.UUID | None
-        Explicit person ID. If ``None``, resolves to the default person.
+        Explicit person ID. If ``None``, returns ``None`` (no filter).
 
     Returns
     -------
     uuid.UUID | None
-        Resolved person ID, or ``None`` if no default person exists.
+        The validated person ID, or ``None`` for unfiltered queries.
 
     Raises
     ------
@@ -40,10 +40,7 @@ def _resolve_person_id(
         if not person or person.retired_at:
             raise HTTPException(status_code=404, detail="Person not found")
         return person_id
-    default = session.exec(
-        select(Person).where(Person.is_default == True)  # noqa: E712
-    ).first()
-    return default.id if default else None
+    return None
 
 
 OptionalPersonIdDep = Annotated[uuid.UUID | None, Depends(_resolve_person_id)]
