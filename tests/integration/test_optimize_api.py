@@ -3,12 +3,20 @@
 import uuid
 from datetime import datetime, timezone
 
+import pandas as pd
+from baybe import Campaign as BaybeCampaign
 from sqlmodel import select
 
-from beanbay.models.optimization import MethodParameterDefault
+from beanbay.models.optimization import (
+    BeanParameterOverride,
+    Campaign,
+    MethodParameterDefault,
+)
 from beanbay.models.tag import BrewMethod
 from beanbay.seed import seed_brew_methods
 from beanbay.seed_optimization import seed_method_parameter_defaults
+from beanbay.services.optimizer import OptimizerService
+from beanbay.services.parameter_ranges import compute_effective_ranges
 
 
 def test_seed_espresso_defaults(session):
@@ -898,3 +906,342 @@ class TestPersonPreferences:
         resp = client.get(PREFERENCES.format(person_id=fake_id))
         assert resp.status_code == 404
         assert "Person" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Campaign Progress tests
+# ---------------------------------------------------------------------------
+
+PROGRESS = "/api/v1/optimize/campaigns/{campaign_id}/progress"
+
+
+class TestCampaignProgress:
+    """Tests for GET /api/v1/optimize/campaigns/{campaign_id}/progress."""
+
+    def test_campaign_no_brews(self, client, session):
+        """Campaign with no brews returns getting_started and empty score_history."""
+        seed_brew_methods(session)
+        session.commit()
+        seed_method_parameter_defaults(session)
+        session.commit()
+
+        method_id = _create_brew_method(client, "espresso_prog1")
+        bean_id = _create_bean(client, "Progress Bean 1")
+        setup_id = _create_brew_setup(client, method_id)
+
+        resp = client.post(
+            CAMPAIGNS,
+            json={"bean_id": bean_id, "brew_setup_id": setup_id},
+        )
+        assert resp.status_code == 201
+        campaign_id = resp.json()["id"]
+
+        resp = client.get(PROGRESS.format(campaign_id=campaign_id))
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["phase"] == "random"
+        assert data["measurement_count"] == 0
+        assert data["best_score"] is None
+        assert data["convergence"]["status"] == "getting_started"
+        assert data["convergence"]["improvement_rate"] is None
+        assert data["score_history"] == []
+
+    def test_campaign_with_scored_brews(self, client, session):
+        """Campaign with brews that have taste scores returns score_history."""
+        seed_brew_methods(session)
+        session.commit()
+        seed_method_parameter_defaults(session)
+        session.commit()
+
+        method_id = _create_brew_method(client, "espresso_prog2")
+        setup_id = _create_brew_setup(client, method_id)
+        person_id = _create_person(client, "Progress Tester")
+        bean_id = _create_bean(client, "Progress Bean 2")
+        bag_id = _create_bag(client, bean_id)
+
+        # Create campaign for this bean+setup
+        resp = client.post(
+            CAMPAIGNS,
+            json={"bean_id": bean_id, "brew_setup_id": setup_id},
+        )
+        assert resp.status_code == 201
+        campaign_id = resp.json()["id"]
+
+        # Create several brews with taste scores
+        scores = [6.5, 7.0, 8.0, 7.5]
+        for score in scores:
+            _create_brew_with_taste(
+                client, bag_id, setup_id, person_id, score=score,
+            )
+
+        resp = client.get(PROGRESS.format(campaign_id=campaign_id))
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["score_history"] != []
+        assert len(data["score_history"]) == len(scores)
+
+        # Verify shot_number is sequential
+        for i, entry in enumerate(data["score_history"], 1):
+            assert entry["shot_number"] == i
+            assert entry["score"] is not None
+            assert entry["is_failed"] is False
+
+    def test_campaign_progress_not_found(self, client):
+        """Non-existent campaign_id returns 404."""
+        fake_id = str(uuid.uuid4())
+        resp = client.get(PROGRESS.format(campaign_id=fake_id))
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Helpers for posterior prediction tests
+# ---------------------------------------------------------------------------
+
+POSTERIOR = "/api/v1/optimize/campaigns/{campaign_id}/posterior"
+
+
+def _setup_trained_campaign(client, session, measurement_count=3):
+    """Seed data, create a pour-over campaign, add brews, and train BayBE.
+
+    Creates a campaign with ``measurement_count`` brews that have taste
+    scores, builds a BayBE campaign, adds measurements, and stores the
+    serialized ``campaign_json`` on the DB row.
+
+    Parameters
+    ----------
+    client : TestClient
+        FastAPI test client.
+    session : Session
+        Database session (must share the same engine as the client).
+    measurement_count : int
+        Number of brews with taste scores to create.
+
+    Returns
+    -------
+    dict
+        Keys: campaign_id, bean_id, brew_setup_id, param_names.
+    """
+    # Seed brew methods and method parameter defaults
+    seed_brew_methods(session)
+    session.commit()
+    seed_method_parameter_defaults(session)
+    session.commit()
+
+    # Look up seeded pour-over method
+    pour_over = session.exec(
+        select(BrewMethod).where(BrewMethod.name == "pour-over")
+    ).one()
+    method_id = str(pour_over.id)
+
+    bean_id = _create_bean(client, "Posterior Bean")
+    setup_id = _create_brew_setup(client, method_id)
+
+    # Create campaign via API
+    resp = client.post(
+        CAMPAIGNS,
+        json={"bean_id": bean_id, "brew_setup_id": setup_id},
+    )
+    assert resp.status_code == 201
+    campaign_id = resp.json()["id"]
+
+    # Create a person and bag for brews
+    person_id = _create_person(client, "Posterior Tester")
+    bag_id = _create_bag(client, bean_id)
+
+    # Create brews with taste scores and pour-over parameter values
+    param_sets = [
+        {"temperature": 90.0, "dose": 15.0, "yield_amount": 250.0, "bloom_weight": 40.0},
+        {"temperature": 93.0, "dose": 18.0, "yield_amount": 300.0, "bloom_weight": 50.0},
+        {"temperature": 96.0, "dose": 20.0, "yield_amount": 350.0, "bloom_weight": 60.0},
+        {"temperature": 88.0, "dose": 16.0, "yield_amount": 280.0, "bloom_weight": 45.0},
+        {"temperature": 95.0, "dose": 22.0, "yield_amount": 400.0, "bloom_weight": 70.0},
+    ]
+    scores = [7.0, 8.0, 8.5, 6.5, 9.0]
+
+    for i in range(measurement_count):
+        params = param_sets[i % len(param_sets)]
+        score = scores[i % len(scores)]
+        resp = client.post(
+            BREWS,
+            json={
+                "bag_id": bag_id,
+                "brew_setup_id": setup_id,
+                "person_id": person_id,
+                "dose": params["dose"],
+                "temperature": params["temperature"],
+                "yield_amount": params["yield_amount"],
+                "bloom_weight": params["bloom_weight"],
+                "brewed_at": datetime.now(timezone.utc).isoformat(),
+                "taste": {"score": score},
+            },
+        )
+        assert resp.status_code == 201
+
+    # Build a trained BayBE campaign
+    campaign_row = session.get(Campaign, uuid.UUID(campaign_id))
+
+    # Load method defaults for effective ranges
+    defaults = session.exec(
+        select(MethodParameterDefault).where(
+            MethodParameterDefault.brew_method_id == pour_over.id
+        )
+    ).all()
+    overrides = session.exec(
+        select(BeanParameterOverride).where(
+            BeanParameterOverride.bean_id == uuid.UUID(bean_id)
+        )
+    ).all()
+    effective_ranges = compute_effective_ranges(list(defaults), None, None, list(overrides))
+    param_names = [r.parameter_name for r in effective_ranges]
+
+    baybe_campaign = OptimizerService.build_campaign(effective_ranges)
+
+    # Build measurements DataFrame
+    rows = []
+    for i in range(measurement_count):
+        params = param_sets[i % len(param_sets)]
+        score = scores[i % len(scores)]
+        row = {name: params[name] for name in param_names}
+        row["score"] = score
+        rows.append(row)
+    measurements_df = pd.DataFrame(rows)
+    baybe_campaign.add_measurements(measurements_df)
+
+    # Store serialized campaign on the DB row
+    campaign_row.campaign_json = baybe_campaign.to_json()
+    campaign_row.measurement_count = measurement_count
+    campaign_row.best_score = max(scores[:measurement_count])
+    session.add(campaign_row)
+    session.commit()
+
+    return {
+        "campaign_id": campaign_id,
+        "bean_id": bean_id,
+        "brew_setup_id": setup_id,
+        "param_names": param_names,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Posterior Prediction tests
+# ---------------------------------------------------------------------------
+
+
+class TestPosteriorPredictions:
+    """Tests for GET /api/v1/optimize/campaigns/{campaign_id}/posterior."""
+
+    def test_posterior_1d(self, recommend_client, recommend_session):
+        """1D posterior returns grid, mean, std of correct length."""
+        ids = _setup_trained_campaign(
+            recommend_client, recommend_session, measurement_count=3
+        )
+        campaign_id = ids["campaign_id"]
+        points = 20
+
+        resp = recommend_client.get(
+            POSTERIOR.format(campaign_id=campaign_id),
+            params={"params": "temperature", "points": points},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["params"] == ["temperature"]
+        assert len(data["grid"]) == 1
+        assert len(data["grid"][0]) == points
+        assert len(data["mean"]) == points
+        assert len(data["std"]) == points
+        # Mean and std should be numeric
+        assert all(isinstance(v, (int, float)) for v in data["mean"])
+        assert all(isinstance(v, (int, float)) for v in data["std"])
+
+    def test_posterior_2d(self, recommend_client, recommend_session):
+        """2D posterior returns nested arrays (points x points)."""
+        ids = _setup_trained_campaign(
+            recommend_client, recommend_session, measurement_count=3
+        )
+        campaign_id = ids["campaign_id"]
+        points = 10
+
+        resp = recommend_client.get(
+            POSTERIOR.format(campaign_id=campaign_id),
+            params={"params": "temperature,dose", "points": points},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["params"] == ["temperature", "dose"]
+        assert len(data["grid"]) == 2
+        assert len(data["grid"][0]) == points
+        assert len(data["grid"][1]) == points
+        # Mean and std should be 2D: points x points
+        assert len(data["mean"]) == points
+        assert all(len(row) == points for row in data["mean"])
+        assert len(data["std"]) == points
+        assert all(len(row) == points for row in data["std"])
+
+    def test_posterior_includes_measurements(
+        self, recommend_client, recommend_session
+    ):
+        """Response includes measurement overlay data."""
+        ids = _setup_trained_campaign(
+            recommend_client, recommend_session, measurement_count=3
+        )
+        campaign_id = ids["campaign_id"]
+
+        resp = recommend_client.get(
+            POSTERIOR.format(campaign_id=campaign_id),
+            params={"params": "temperature"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert "measurements" in data
+        assert len(data["measurements"]) == 3
+        for m in data["measurements"]:
+            assert "values" in m
+            assert "score" in m
+            assert isinstance(m["values"], dict)
+            assert isinstance(m["score"], (int, float))
+
+    def test_posterior_insufficient_data(
+        self, recommend_client, recommend_session
+    ):
+        """Campaign with <2 measurements returns 422."""
+        ids = _setup_trained_campaign(
+            recommend_client, recommend_session, measurement_count=1
+        )
+        campaign_id = ids["campaign_id"]
+
+        resp = recommend_client.get(
+            POSTERIOR.format(campaign_id=campaign_id),
+            params={"params": "temperature"},
+        )
+        assert resp.status_code == 422
+
+    def test_posterior_campaign_not_found(
+        self, recommend_client, recommend_session
+    ):
+        """Non-existent campaign returns 404."""
+        fake_id = str(uuid.uuid4())
+        resp = recommend_client.get(
+            POSTERIOR.format(campaign_id=fake_id),
+            params={"params": "temperature"},
+        )
+        assert resp.status_code == 404
+
+    def test_posterior_invalid_param_name(
+        self, recommend_client, recommend_session
+    ):
+        """Unknown parameter name returns 422."""
+        ids = _setup_trained_campaign(
+            recommend_client, recommend_session, measurement_count=3
+        )
+        campaign_id = ids["campaign_id"]
+
+        resp = recommend_client.get(
+            POSTERIOR.format(campaign_id=campaign_id),
+            params={"params": "nonexistent_param"},
+        )
+        assert resp.status_code == 422

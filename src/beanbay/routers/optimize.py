@@ -29,14 +29,20 @@ from beanbay.schemas.optimization import (
     CampaignCreate,
     CampaignDetailRead,
     CampaignListRead,
+    CampaignProgress,
+    ConvergenceInfo,
     EffectiveRange,
+    FeatureImportanceResponse,
     FlavorFrequency,
+    MeasurementPoint,
     MethodBreakdown,
     MethodParameterDefaultRead,
     OptimizationJobRead,
     OriginPreference,
     PersonPreferences,
+    PosteriorResponse,
     RecommendationRead,
+    ScoreHistoryEntry,
     TopBean,
 )
 from beanbay.services.parameter_ranges import compute_effective_ranges
@@ -459,6 +465,317 @@ def reset_campaign(
     session.commit()
 
     return {"detail": "Campaign reset."}
+
+
+# ======================================================================
+# Campaign Progress
+# ======================================================================
+
+
+@router.get(
+    "/optimize/campaigns/{campaign_id}/progress",
+    response_model=CampaignProgress,
+)
+def get_campaign_progress(
+    campaign_id: uuid.UUID,
+    session: SessionDep,
+) -> CampaignProgress:
+    """Get optimization progress and convergence data.
+
+    Queries brews for the campaign's bean+setup combination, builds a
+    chronological score history, and computes convergence status.
+
+    Parameters
+    ----------
+    campaign_id : uuid.UUID
+        Primary key of the campaign.
+    session : SessionDep
+        Database session.
+
+    Returns
+    -------
+    CampaignProgress
+        Progress summary with convergence info and score history.
+
+    Raises
+    ------
+    HTTPException
+        404 if the campaign does not exist.
+    """
+    campaign = session.get(Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found.")
+
+    # Query brews for this bean+setup combination, ordered by brewed_at
+    stmt = (
+        select(Brew)
+        .join(Bag, Brew.bag_id == Bag.id)
+        .where(
+            Bag.bean_id == campaign.bean_id,
+            Brew.brew_setup_id == campaign.brew_setup_id,
+            Brew.retired_at.is_(None),
+        )
+        .order_by(Brew.brewed_at.asc())
+    )
+    brews = session.exec(stmt).all()
+
+    # Build score history
+    score_history = []
+    for i, brew in enumerate(brews, 1):
+        taste = brew.taste
+        score_history.append(
+            ScoreHistoryEntry(
+                shot_number=i,
+                score=taste.score if taste else None,
+                is_failed=brew.is_failed,
+                phase=None,
+            )
+        )
+
+    # Compute convergence status
+    valid_scores = [
+        e.score
+        for e in score_history
+        if not e.is_failed and e.score is not None
+    ]
+    valid_count = len(valid_scores)
+
+    if valid_count < 3:
+        convergence_status = "getting_started"
+    elif campaign.phase == "random":
+        convergence_status = "exploring"
+    elif campaign.phase == "learning":
+        convergence_status = "learning"
+    elif campaign.phase == "optimizing":
+        convergence_status = "converged"
+    else:
+        convergence_status = "exploring"
+
+    # Compute improvement rate: compare best of last 3 valid vs previous 3
+    improvement_rate = None
+    if valid_count >= 6:
+        recent_best = max(valid_scores[-3:])
+        previous_best = max(valid_scores[-6:-3])
+        if previous_best > 0:
+            improvement_rate = round(
+                (recent_best - previous_best) / previous_best, 4
+            )
+
+    return CampaignProgress(
+        phase=campaign.phase,
+        measurement_count=campaign.measurement_count,
+        best_score=campaign.best_score,
+        convergence=ConvergenceInfo(
+            status=convergence_status,
+            improvement_rate=improvement_rate,
+        ),
+        score_history=score_history,
+    )
+
+
+# ======================================================================
+# Posterior Predictions
+# ======================================================================
+
+
+@router.get(
+    "/optimize/campaigns/{campaign_id}/posterior",
+    response_model=PosteriorResponse,
+)
+def get_posterior_predictions(
+    campaign_id: uuid.UUID,
+    session: SessionDep,
+    params: str = Query(..., description="Comma-separated 1-2 parameter names"),
+    points: int = Query(30, ge=5, le=100, description="Grid resolution per axis"),
+) -> PosteriorResponse:
+    """Compute posterior mean and std over a parameter grid.
+
+    Sweeps 1 or 2 parameters while holding all others at their
+    best-known values. Returns the surrogate model predictions
+    and actual measurements for chart overlay.
+
+    Parameters
+    ----------
+    campaign_id : uuid.UUID
+        Primary key of the campaign.
+    session : SessionDep
+        Database session.
+    params : str
+        Comma-separated list of 1 or 2 parameter names to sweep.
+    points : int
+        Number of grid points per swept axis (5-100, default 30).
+
+    Returns
+    -------
+    PosteriorResponse
+        Grid values, predicted mean/std, and measurement overlay.
+
+    Raises
+    ------
+    HTTPException
+        404 if the campaign does not exist.
+        422 if campaign has no trained model, <2 measurements,
+        invalid parameter names, or categorical parameters requested.
+    """
+    import numpy as np
+    import pandas as pd
+    from baybe import Campaign as BaybeCampaign
+
+    # 1. Load campaign
+    campaign = session.get(Campaign, campaign_id)
+    if campaign is None:
+        raise HTTPException(status_code=404, detail="Campaign not found.")
+
+    if not campaign.campaign_json:
+        raise HTTPException(
+            status_code=422,
+            detail="Campaign has no trained model. Request a recommendation first.",
+        )
+
+    # 2. Parse param names
+    param_names = [p.strip() for p in params.split(",") if p.strip()]
+    if not 1 <= len(param_names) <= 2:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide 1 or 2 comma-separated parameter names.",
+        )
+
+    # 3. Compute effective ranges
+    ranges = _compute_campaign_ranges(session, campaign)
+    range_map = {r.parameter_name: r for r in ranges}
+
+    # 4. Validate requested params exist and are continuous
+    for pname in param_names:
+        if pname not in range_map:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Unknown parameter: '{pname}'.",
+            )
+        if range_map[pname].allowed_values is not None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Parameter '{pname}' is categorical; only continuous parameters are supported.",
+            )
+
+    # 5. Load measurements (same query pattern as taskiq worker)
+    from beanbay.models.bean import Bag
+
+    stmt = (
+        select(Brew)
+        .join(Bag, Brew.bag_id == Bag.id)
+        .join(BrewTaste, Brew.id == BrewTaste.brew_id)
+        .where(
+            Bag.bean_id == campaign.bean_id,
+            Brew.brew_setup_id == campaign.brew_setup_id,
+            Brew.is_failed == False,  # noqa: E712
+            Brew.retired_at.is_(None),  # type: ignore[union-attr]
+            BrewTaste.score.is_not(None),  # type: ignore[union-attr]
+        )
+    )
+    brews = session.exec(stmt).all()
+
+    # 6. Build measurement points for overlay
+    all_param_names = [r.parameter_name for r in ranges]
+    measurement_points: list[MeasurementPoint] = []
+    for brew in brews:
+        values = {}
+        has_all = True
+        for pname in all_param_names:
+            val = getattr(brew, pname, None)
+            if val is None:
+                has_all = False
+                break
+            values[pname] = val
+        if has_all and brew.taste and brew.taste.score is not None:
+            measurement_points.append(
+                MeasurementPoint(values=values, score=brew.taste.score)
+            )
+
+    # 7. Validate >= 2 valid measurements
+    if len(measurement_points) < 2:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Need at least 2 valid measurements, found {len(measurement_points)}.",
+        )
+
+    # 8. Find best-known values from highest-scoring measurement
+    best_measurement = max(measurement_points, key=lambda m: m.score)
+    best_values = best_measurement.values
+
+    # 9. Build grid DataFrame
+    grid_arrays: list[list[float]] = []
+    for pname in param_names:
+        r = range_map[pname]
+        grid_arrays.append(
+            np.linspace(r.min_value, r.max_value, points).tolist()
+        )
+
+    if len(param_names) == 1:
+        # 1D: single column swept, others held constant
+        grid_df_rows = []
+        for val in grid_arrays[0]:
+            row: dict = {}
+            for r in ranges:
+                if r.parameter_name == param_names[0]:
+                    row[r.parameter_name] = val
+                elif r.parameter_name in best_values:
+                    row[r.parameter_name] = best_values[r.parameter_name]
+                elif r.allowed_values is not None:
+                    # Categorical: use first allowed value
+                    row[r.parameter_name] = r.allowed_values.split(",")[0].strip()
+                else:
+                    # Numeric: use midpoint
+                    row[r.parameter_name] = (r.min_value + r.max_value) / 2
+            grid_df_rows.append(row)
+        grid_df = pd.DataFrame(grid_df_rows)
+    else:
+        # 2D: meshgrid for two swept params
+        mesh_0, mesh_1 = np.meshgrid(grid_arrays[0], grid_arrays[1])
+        grid_df_rows = []
+        for i in range(points):
+            for j in range(points):
+                row = {}
+                for r in ranges:
+                    if r.parameter_name == param_names[0]:
+                        row[r.parameter_name] = float(mesh_0[i, j])
+                    elif r.parameter_name == param_names[1]:
+                        row[r.parameter_name] = float(mesh_1[i, j])
+                    elif r.parameter_name in best_values:
+                        row[r.parameter_name] = best_values[r.parameter_name]
+                    elif r.allowed_values is not None:
+                        row[r.parameter_name] = r.allowed_values.split(",")[0].strip()
+                    else:
+                        row[r.parameter_name] = (r.min_value + r.max_value) / 2
+                grid_df_rows.append(row)
+        grid_df = pd.DataFrame(grid_df_rows)
+
+    # 10. Call posterior_stats
+    baybe_campaign = BaybeCampaign.from_json(campaign.campaign_json)
+    stats_df = baybe_campaign.posterior_stats(grid_df)
+
+    mean_vals = stats_df["score_mean"].tolist()
+    std_vals = stats_df["score_std"].tolist()
+
+    # 11. Reshape for 2D case
+    if len(param_names) == 2:
+        mean_2d = []
+        std_2d = []
+        for i in range(points):
+            row_start = i * points
+            row_end = row_start + points
+            mean_2d.append(mean_vals[row_start:row_end])
+            std_2d.append(std_vals[row_start:row_end])
+        mean_vals = mean_2d
+        std_vals = std_2d
+
+    # 12. Return response
+    return PosteriorResponse(
+        params=param_names,
+        grid=grid_arrays,
+        mean=mean_vals,
+        std=std_vals,
+        measurements=measurement_points,
+    )
 
 
 # ======================================================================
