@@ -1,15 +1,16 @@
+import { useState } from 'react';
 import { useParams } from 'react-router';
 import { Box, Card, CardContent, Chip, Grid, LinearProgress, Typography } from '@mui/material';
 import PageHeader from '@/components/PageHeader';
 import StatsCard from '@/components/StatsCard';
-import { useCampaignDetail, useCampaignProgress, useFeatureImportance } from '../hooks';
+import { useCampaignDetail, useCampaignRecommendations, useFeatureImportance } from '../hooks';
 import ScoreProgressChart from '../components/ScoreProgressChart';
 import ParameterHeatmap from '../components/ParameterHeatmap';
 import ParameterSweepChart from '../components/ParameterSweepChart';
 import PredictionSurface from '../components/PredictionSurface';
 import FeatureImportance from '../components/FeatureImportance';
 import UncertaintySurface from '../components/UncertaintySurface';
-import RecommendationHistory from '../components/RecommendationHistory';
+import BrewHistory from '../components/BrewHistory';
 
 const phaseColor: Record<string, 'info' | 'warning' | 'success'> = {
   random: 'info',
@@ -19,12 +20,26 @@ const phaseColor: Record<string, 'info' | 'warning' | 'success'> = {
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
-  const { data: campaign, isLoading: loadingDetail } = useCampaignDetail(campaignId!);
-  const { data: progress, isLoading: loadingProgress } = useCampaignProgress(campaignId!);
+  const { data: campaign, isLoading } = useCampaignDetail(campaignId!);
   const { data: shap } = useFeatureImportance(campaignId!);
+  const { data: recommendations } = useCampaignRecommendations(campaignId!);
 
-  if (loadingDetail || loadingProgress) return <LinearProgress />;
-  if (!campaign || !progress) return null;
+  const storageKey = `beanbay:opt-mode:${campaignId}`;
+  const [userOverride, setUserOverride] = useState<string | null>(
+    () => localStorage.getItem(storageKey),
+  );
+
+  if (isLoading) return <LinearProgress />;
+  if (!campaign) return null;
+
+  const latestRec = recommendations?.[recommendations.length - 1];
+  const resolvedMode = userOverride ?? latestRec?.optimization_mode ?? 'community';
+  const isForced = userOverride != null;
+  const brewCount = latestRec?.personal_brew_count;
+
+  const chipLabel = isForced
+    ? `${resolvedMode === 'personal' ? 'Personal' : 'Community'} (forced)`
+    : `${resolvedMode === 'personal' ? 'Personal' : 'Community'}${brewCount != null ? ` (${brewCount} brews)` : ''}`;
 
   const continuousParams = (campaign.effective_ranges ?? [])
     .filter((r) => r.allowed_values == null)
@@ -45,24 +60,43 @@ export default function CampaignDetailPage() {
 
       {/* Stats header */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 3 }}>
           <Card sx={{ minWidth: 140 }}>
             <CardContent>
               <Typography variant="body2" color="text.secondary">Phase</Typography>
-              <Chip label={progress.phase} color={phaseColor[progress.phase] ?? 'default'} sx={{ mt: 0.5 }} />
+              <Chip label={campaign.phase} color={phaseColor[campaign.phase] ?? 'default'} sx={{ mt: 0.5 }} />
             </CardContent>
           </Card>
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatsCard label="Shots / Best" value={`${progress.measurement_count} / ${progress.best_score?.toFixed(1) ?? '—'}`} />
+        <Grid size={{ xs: 12, sm: 3 }}>
+          <StatsCard label="Shots / Best" value={`${campaign.measurement_count} / ${campaign.best_score?.toFixed(1) ?? '—'}`} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <StatsCard label="Convergence" value={progress.convergence.status.replace(/_/g, ' ')} />
+        <Grid size={{ xs: 12, sm: 3 }}>
+          <StatsCard label="Convergence" value={campaign.convergence?.status.replace(/_/g, ' ') ?? '—'} />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 3 }}>
+          <Card sx={{ minWidth: 140 }}>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary">Optimization</Typography>
+              <Chip
+                label={chipLabel}
+                color={resolvedMode === 'personal' ? 'success' : 'default'}
+                onClick={() => {
+                  const next = resolvedMode === 'personal' ? 'community' : 'personal';
+                  localStorage.setItem(storageKey, next);
+                  setUserOverride(next);
+                }}
+                clickable
+                size="small"
+                sx={{ mt: 0.5 }}
+              />
+            </CardContent>
+          </Card>
         </Grid>
       </Grid>
 
       <Section title="Score Progress">
-        <ScoreProgressChart history={progress.score_history} />
+        <ScoreProgressChart history={campaign.score_history ?? []} />
       </Section>
 
       <Section title="Parameter Exploration">
@@ -93,8 +127,8 @@ export default function CampaignDetailPage() {
         <UncertaintySurface campaignId={campaignId!} params={continuousParams} defaultX={defaultX} defaultY={defaultY} />
       </Section>
 
-      <Section title="Recommendation History">
-        <RecommendationHistory campaignId={campaignId!} />
+      <Section title="Brew History">
+        <BrewHistory beanId={campaign.bean_id} brewSetupId={campaign.brew_setup_id} effectiveRanges={campaign.effective_ranges ?? []} />
       </Section>
     </Box>
   );
