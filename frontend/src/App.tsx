@@ -19,6 +19,9 @@ const CuppingDetailPage = lazy(() => import('@/features/cuppings/pages/CuppingDe
 const RatingDetailPage = lazy(() => import('@/features/ratings/RatingDetailPage'));
 const PeoplePage = lazy(() => import('@/features/people/PeoplePage'));
 const LookupsPage = lazy(() => import('@/features/settings/LookupsPage'));
+const CampaignListPage = lazy(() => import('@/features/optimize/pages/CampaignListPage'));
+const CampaignDetailPage = lazy(() => import('@/features/optimize/pages/CampaignDetailPage'));
+const PersonPreferencesPage = lazy(() => import('@/features/people/pages/PersonPreferencesPage'));
 
 const Loading = () => (
   <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -57,6 +60,9 @@ export default function App() {
           <Route path="bean-ratings/:ratingId" element={<RatingDetailPage />} />
           <Route path="people" element={<PeoplePage />} />
           <Route path="settings/lookups" element={<LookupsPage />} />
+          <Route path="/optimize" element={<CampaignListPage />} />
+          <Route path="/optimize/:campaignId" element={<CampaignDetailPage />} />
+          <Route path="/people/:personId/preferences" element={<PersonPreferencesPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

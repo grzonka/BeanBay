@@ -11,6 +11,7 @@ import {
   WaterDrop as WatersIcon, Tune as SetupsIcon, Star as CuppingsIcon,
   People as PeopleIcon, Settings as SettingsIcon, Add as AddIcon,
   LightMode as LightModeIcon, DarkMode as DarkModeIcon,
+  AutoFixHigh as OptimizeIcon,
 } from '@mui/icons-material';
 import { useThemeMode } from '@/theme/ThemeContext';
 
@@ -26,6 +27,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
       { label: 'Beans', path: '/beans', icon: <BeansIcon /> },
       { label: 'Brews', path: '/brews', icon: <BrewsIcon /> },
+      { label: 'Optimize', path: '/optimize', icon: <OptimizeIcon /> },
     ],
   },
   {
