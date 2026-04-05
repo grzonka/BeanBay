@@ -7,7 +7,7 @@ services:
     volumes:
       - beanbay-data:/data
     environment:
-      - BEANBAY_DATA_DIR=/data
+      - BEANBAY_DATABASE_URL=sqlite:////data/beanbay.db
     restart: unless-stopped
 
 volumes:

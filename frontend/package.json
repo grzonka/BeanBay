@@ -1,0 +1,41 @@
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "biome check .",
+    "preview": "vite preview",
+    "generate-types": "./scripts/generate-types.sh",
+    "build:package": "tsc -b && vite build --outDir ../../src/beanbay/static --emptyOutDir"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
+    "@mui/x-data-grid": "^8.28.0",
+    "@tanstack/react-query": "^5.94.5",
+    "@tanstack/react-query-devtools": "^5.94.5",
+    "axios": "^1.13.6",
+    "lodash-es": "^4.17.23",
+    "plotly.js-dist-min": "^3.4.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-plotly.js": "^2.6.0",
+    "react-router": "^7.13.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.1"
+  }
+}

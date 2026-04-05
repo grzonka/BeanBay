@@ -15,3 +15,4 @@ __marimo__/
 unraid/
 my_espresso.py
 .pytest_cache/
+frontend/node_modules/

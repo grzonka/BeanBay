@@ -1,69 +1,55 @@
-"""Shared test fixtures for BeanBay."""
-
-import os
-
-# Force in-memory SQLite for the production engine (created at import time in app.database).
-# This prevents CI failures when data/ directory doesn't exist.
-# Must be set BEFORE importing app modules.
-os.environ.setdefault("BEANBAY_DATABASE_URL", "sqlite:///:memory:")
-
-from pathlib import Path
-
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import event
+from sqlmodel import Session, SQLModel, create_engine
 
-from app.database import Base, engine, get_db
-from app.main import app
-from app.models import Bean, BrewMethod, BrewSetup, Brewer, Grinder, Measurement, Paper, WaterRecipe  # noqa: F401 — registers models with Base
-from app.models import Bag  # noqa: F401 — registers Bag with Base
-from app.models import CampaignState, PendingRecommendation  # noqa: F401 — registers with Base
-from app.services.optimizer import OptimizerService
-
-# Create tables once on the (in-memory) engine.
-Base.metadata.create_all(bind=engine)
+import beanbay.models  # noqa: F401 — register all models with metadata
+from beanbay.database import get_session
+from beanbay.main import app
 
 
-@pytest.fixture()
-def db_session():
-    """Function-scoped database session with rollback after each test."""
+@pytest.fixture(name="engine", scope="session")
+def engine_fixture():
+    """Create a shared in-memory SQLite engine for the test session."""
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    return engine
+
+
+@pytest.fixture(name="session")
+def session_fixture(engine):
+    """Provide a transactional session with SAVEPOINT isolation.
+
+    Each test gets a session that rolls back all changes after the test
+    completes, ensuring full isolation without mocks.
+    """
     connection = engine.connect()
     transaction = connection.begin()
-    Session = sessionmaker(bind=connection)
-    session = Session()
+    session = Session(bind=connection)
+
+    nested = connection.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def restart_savepoint(session, transaction):
+        nonlocal nested
+        if not nested.is_active:
+            nested = connection.begin_nested()
+
     yield session
+
     session.close()
-    if transaction.is_active:
-        transaction.rollback()
+    transaction.rollback()
     connection.close()
 
 
-@pytest.fixture()
-def client(db_session):
-    """FastAPI test client with get_db overridden to use the test session."""
+@pytest.fixture(name="client")
+def client_fixture(session):
+    """Provide a FastAPI TestClient wired to the transactional session."""
+    from fastapi.testclient import TestClient
 
-    def _override_get_db():
-        yield db_session
+    def get_session_override():
+        yield session
 
-    app.dependency_overrides[get_db] = _override_get_db
-    with TestClient(app) as c:
-        yield c
+    app.dependency_overrides[get_session] = get_session_override
+    client = TestClient(app)
+    yield client
     app.dependency_overrides.clear()
-
-
-@pytest.fixture()
-def tmp_campaigns_dir(tmp_path: Path) -> Path:
-    """Temporary campaigns directory."""
-    d = tmp_path / "campaigns"
-    d.mkdir()
-    return d
-
-
-@pytest.fixture()
-def optimizer_service(db_session) -> OptimizerService:
-    """OptimizerService with test DB session factory."""
-
-    def _test_session_factory():
-        return db_session
-
-    return OptimizerService(_test_session_factory)
