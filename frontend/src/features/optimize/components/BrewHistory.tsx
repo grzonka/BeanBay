@@ -16,7 +16,7 @@ const PARAM_FIELDS: Record<string, keyof BrewListItem> = {
   temperature: 'temperature',
   dose: 'dose',
   yield_amount: 'yield_amount',
-  grind_setting: 'grind_setting',
+  grind_setting: 'grind_setting_display',
 };
 
 export default function BrewHistory({
@@ -52,13 +52,19 @@ export default function BrewHistory({
   // Build param columns from effective ranges (only numeric params that map to brew fields)
   const paramCols: GridColDef[] = effectiveRanges
     .filter((r) => r.allowed_values == null && PARAM_FIELDS[r.parameter_name])
-    .map((r) => ({
-      field: PARAM_FIELDS[r.parameter_name] as string,
-      headerName: r.parameter_name.replace(/_/g, ' '),
-      width: 120,
-      valueFormatter: (value: number | null) =>
-        value != null ? value.toFixed(1) : '—',
-    }));
+    .map((r) => {
+      const field = PARAM_FIELDS[r.parameter_name] as string;
+      const isDisplay = field.endsWith('_display');
+      return {
+        field,
+        headerName: r.parameter_name.replace(/_/g, ' '),
+        width: 120,
+        valueFormatter: isDisplay
+          ? (value: string | null) => value ?? '—'
+          : (value: number | null) =>
+              value != null ? value.toFixed(1) : '—',
+      };
+    });
 
   const columns: GridColDef[] = [
     {
